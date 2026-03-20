@@ -15,6 +15,7 @@ Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Sc
   - Jährlich (aktuell/letztes)
   - Periodenweise (je Tarif)
 - ✅ Flexibles Verbrauchs-/Kosten-Tracking (Tag/Nacht getrennt)
+- ✅ **Neu:** Jede Kennzahl (Kosten, Verbrauch, Bilanz) wird als **eigene physische Sensor-Entität** erstellt (optimal für Dashboards).
 - ✅ Recorder-basierte Verlaufsauswertung
 - ✅ Einrichtung über die **Home Assistant UI** (kein YAML nötig)
 
@@ -63,19 +64,54 @@ Einstellungen können nachträglich über **Konfigurieren** geändert werden.
   advance_payment: 70.0
 ```
 
-## Sensor-Attribute
+## Sensor-Entitäten & Dashboard
 
-Der Sensor liefert im Zustand die **aggregierten Gesamtkosten (€)** sowie folgende Attribute:
+Die Integration erzeugt für jeden aktivierten Zeitraum separate Sensoren für **Kosten (€)** und **Verbrauch (kWh)** unterhalb eines gemeinsamen Gerätes.
 
-| Attribut | Beschreibung |
-|----------|-------------|
-| `total_consumption` | Gesamtverbrauch (kWh) |
-| `total_costs` | Gesamtkosten (€) |
-| `today_consumption` / `today_costs` | Heute |
-| `previous_day_consumption` / `_costs` | Gestern |
-| `current_week_*` / `current_month_*` / `current_year_*` | Zeiträume |
-| `period_JJJJ-MM-TT_consumption` / `_costs` | Pro Tarifperiode |
-| `period_JJJJ-MM-TT_balance` | Bilanz (nur wenn aktiviert) |
+*(Beispiel: Wenn der Name in der UI "Strom" lautet, heißen die Entitäten `sensor.strom_heute_kosten` und `sensor.strom_heute_verbrauch`).*
+
+### Beispiel-Karte fürs Dashboard (Grid / Übersicht)
+
+Hier ist ein vorgefertigter YAML-Code für eine schöne Übersicht im HA-Dashboard. Kopiere diesen Code als "Manuelle Karte" (Manual Card) in dein Dashboard (ersetze ggf. `energierechner` durch deinen gewählten Sensornamen):
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entity
+    entity: sensor.energierechner_gesamtkosten
+    name: Gesamtkosten
+    icon: mdi:currency-eur
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: entity
+        entity: sensor.energierechner_heute_kosten
+        name: Kosten Heute
+      - type: entity
+        entity: sensor.energierechner_heute_verbrauch
+        name: Verbrauch Heute
+      - type: entity
+        entity: sensor.energierechner_aktuelle_woche_kosten
+        name: Kosten Woche
+      - type: entity
+        entity: sensor.energierechner_aktuelle_woche_verbrauch
+        name: Verbrauch Woche
+      - type: entity
+        entity: sensor.energierechner_aktueller_monat_kosten
+        name: Kosten Monat
+      - type: entity
+        entity: sensor.energierechner_aktueller_monat_verbrauch
+        name: Verbrauch Monat
+      - type: entity
+        entity: sensor.energierechner_aktuelles_jahr_kosten
+        name: Kosten Jahr
+      - type: entity
+        entity: sensor.energierechner_aktuelles_jahr_verbrauch
+        name: Verbrauch Jahr
+```
+
+> **Tipp:** Wenn du die [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row) HACS Frontend-Karte verwendest, lassen sich Kosten und Verbrauch noch kompakter in *einer* Zeile kombinieren.
 
 ## Debugging
 

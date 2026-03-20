@@ -1,0 +1,276 @@
+"""DataUpdateCoordinator für Energierechner – zentrale Datenbeschaffung."""
+from __future__ import annotations
+
+import logging
+from datetime import datetime, date, time, timedelta
+from typing import Any
+
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.history import state_changes_during_period
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
+
+from .const import (
+    CONF_ADD_BASE_PRICE,
+    CONF_BALANCE,
+    CONF_CURRENT_MONTH,
+    CONF_CURRENT_WEEK,
+    CONF_CURRENT_YEAR,
+    CONF_DAILY,
+    CONF_DAILY_CONSUMPTION,
+    CONF_LAST_MONTH,
+    CONF_LAST_YEAR,
+    CONF_NIGHTLY_CONSUMPTION,
+    CONF_NIGHT_RATE,
+    CONF_PERIODS,
+    CONF_PERIODS_CALCULATION,
+    CONF_PREVIOUS_DAY,
+    CONF_PREVIOUS_WEEK,
+    CONF_SOURCE_ENTITY,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Datum / Zeit Helpers
+# ---------------------------------------------------------------------------
+
+def _parse_date(iso_date: str) -> date:
+    return dt_util.parse_date(iso_date)
+
+
+def _time_from_str(val) -> time:
+    if isinstance(val, time):
+        return val
+    if isinstance(val, str):
+        parts = val.split(":")
+        return time(int(parts[0]), int(parts[1]))
+    return time(22, 0)
+
+
+def _is_night(ts: datetime, night_start: time, night_end: time) -> bool:
+    t = ts.time().replace(second=0, microsecond=0)
+    if night_start < night_end:
+        return night_start <= t < night_end
+    return t >= night_start or t < night_end
+
+
+def _get_period_bounds(keyword: str) -> tuple[datetime, datetime]:
+    now = dt_util.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if keyword == "today":
+        return today, today + timedelta(days=1) - timedelta(seconds=1)
+    if keyword == "previous_day":
+        s = today - timedelta(days=1)
+        return s, today - timedelta(seconds=1)
+    if keyword == "current_week":
+        s = today - timedelta(days=today.weekday())
+        return s, s + timedelta(days=7) - timedelta(seconds=1)
+    if keyword == "previous_week":
+        s = today - timedelta(days=today.weekday() + 7)
+        return s, s + timedelta(days=7) - timedelta(seconds=1)
+    if keyword == "current_month":
+        s = today.replace(day=1)
+        nm = (s.replace(day=28) + timedelta(days=4)).replace(day=1)
+        return s, nm - timedelta(seconds=1)
+    if keyword == "last_month":
+        s = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
+        return s, today.replace(day=1) - timedelta(seconds=1)
+    if keyword == "current_year":
+        s = today.replace(month=1, day=1)
+        return s, today.replace(month=12, day=31, hour=23, minute=59, second=59)
+    if keyword == "last_year":
+        s = today.replace(year=today.year - 1, month=1, day=1)
+        e = today.replace(year=today.year - 1, month=12, day=31, hour=23, minute=59, second=59)
+        return s, e
+    raise ValueError(f"Unbekanntes Zeitraum-Schlüsselwort: {keyword}")
+
+
+# ---------------------------------------------------------------------------
+# Coordinator
+# ---------------------------------------------------------------------------
+
+class EnergierechnerCoordinator(DataUpdateCoordinator):
+    """Holt alle Energiedaten aus dem HA Recorder und berechnet Kosten."""
+
+    def __init__(self, hass: HomeAssistant, config: dict, entry_id: str) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_{entry_id}",
+            update_interval=timedelta(seconds=int(config.get("scan_interval", DEFAULT_SCAN_INTERVAL))),
+        )
+        self._config = config
+        self._entry_id = entry_id
+        self._source = config[CONF_SOURCE_ENTITY]
+        self._night_rate: bool = config.get(CONF_NIGHT_RATE, False)
+        self._add_base_price: bool = config.get(CONF_ADD_BASE_PRICE, False)
+        self._balance: bool = config.get(CONF_BALANCE, False)
+        self._daily_consumption: bool = config.get(CONF_DAILY_CONSUMPTION, False)
+        self._nightly_consumption: bool = config.get(CONF_NIGHTLY_CONSUMPTION, False)
+        self._periods: list[dict] = sorted(
+            config.get(CONF_PERIODS, []),
+            key=lambda p: _parse_date(p["start_date"])
+        )
+
+    # ------------------------------------------------------------------ Recorder
+    async def _get_states(self, start: datetime, end: datetime) -> list:
+        try:
+            result: dict = await get_instance(self.hass).async_add_executor_job(
+                state_changes_during_period,
+                self.hass,
+                start,
+                end,
+                self._source,
+                False,   # no_attributes
+                None,    # limit
+                True,    # include_start_time_state
+            )
+            return result.get(self._source, [])
+        except Exception as err:
+            _LOGGER.warning("Recorder-Fehler: %s", err)
+            return []
+
+    async def _consumption_split(self, start: datetime, end: datetime) -> dict[str, float]:
+        states = await self._get_states(start, end)
+        if len(states) < 2:
+            return {"total": 0.0, "day": 0.0, "night": 0.0}
+
+        def _val(s) -> float:
+            try:
+                return float(s.state)
+            except (TypeError, ValueError):
+                return 0.0
+
+        total = max(0.0, _val(states[-1]) - _val(states[0]))
+
+        if not self._night_rate or not self._periods:
+            return {"total": total, "day": total, "night": 0.0}
+
+        day_kwh = 0.0
+        night_kwh = 0.0
+        prev_val = _val(states[0])
+        prev_ts = states[0].last_updated or states[0].last_changed
+
+        for state in states[1:]:
+            cur_val = _val(state)
+            cur_ts = state.last_updated or state.last_changed
+            delta = cur_val - prev_val
+            if delta > 0 and cur_ts and prev_ts:
+                mid = prev_ts + (cur_ts - prev_ts) / 2
+                tariff = self._tariff_at(mid)
+                ns = _time_from_str(tariff.get("night_start", "22:00")) if tariff else time(22, 0)
+                ne = _time_from_str(tariff.get("night_end", "06:00")) if tariff else time(6, 0)
+                if _is_night(mid, ns, ne):
+                    night_kwh += delta
+                else:
+                    day_kwh += delta
+            prev_val = cur_val
+            prev_ts = cur_ts
+
+        return {"total": round(total, 3), "day": round(day_kwh, 3), "night": round(night_kwh, 3)}
+
+    def _tariff_at(self, ts: datetime) -> dict | None:
+        if not self._periods:
+            return None
+        current = self._periods[0]
+        for p in self._periods:
+            if _parse_date(p["start_date"]) <= ts.date():
+                current = p
+        if not current.get("night_price"):
+            current = {**current, "night_price": current["day_price"]}
+        return current
+
+    def _costs(self, split: dict[str, float], tariff: dict | None, days: int) -> float:
+        day_p = float(tariff["day_price"]) if tariff else 0.0
+        night_p = float(tariff.get("night_price") or day_p) if tariff else 0.0
+        if self._night_rate:
+            cost = split["day"] * day_p + split["night"] * night_p
+        else:
+            cost = split["total"] * day_p
+        if self._add_base_price and tariff:
+            base = float(tariff.get("base_price", 0.0))
+            if base > 0:
+                cost += base / 365 * days
+        return round(cost, 3)
+
+    # ------------------------------------------------------------------ Main update
+    async def _async_update_data(self) -> dict[str, Any]:
+        cfg = self._config
+        data: dict[str, Any] = {}
+        total_costs = 0.0
+        total_kwh = 0.0
+
+        # ---- Standard-Zeiträume ----------------------------------------
+        period_flags = [
+            (CONF_DAILY,         "today",         "today"),
+            (CONF_PREVIOUS_DAY,  "previous_day",  "previous_day"),
+            (CONF_CURRENT_WEEK,  "current_week",  "current_week"),
+            (CONF_PREVIOUS_WEEK, "previous_week", "previous_week"),
+            (CONF_CURRENT_MONTH, "current_month", "current_month"),
+            (CONF_LAST_MONTH,    "last_month",    "last_month"),
+            (CONF_CURRENT_YEAR,  "current_year",  "current_year"),
+            (CONF_LAST_YEAR,     "last_year",     "last_year"),
+        ]
+
+        for flag, keyword, label in period_flags:
+            if not cfg.get(flag):
+                continue
+            start, end = _get_period_bounds(keyword)
+            split = await self._consumption_split(start, end)
+            tariff = self._tariff_at(start)
+            days = (end.date() - start.date()).days + 1
+            cost = self._costs(split, tariff, days)
+
+            data[f"{label}_consumption"] = split["total"]
+            data[f"{label}_costs"] = cost
+            if self._daily_consumption:
+                data[f"{label}_day_consumption"] = split["day"]
+            if self._nightly_consumption:
+                data[f"{label}_night_consumption"] = split["night"]
+            total_costs += cost
+            total_kwh += split["total"]
+
+        # ---- Periodenberechnung -----------------------------------------
+        if cfg.get(CONF_PERIODS_CALCULATION) and self._periods:
+            for i, period in enumerate(self._periods):
+                begin = _parse_date(period["start_date"])
+                if not begin:
+                    continue
+                tz = dt_util.now().tzinfo
+                p_start = datetime.combine(begin, time.min).replace(tzinfo=tz)
+                if i + 1 < len(self._periods):
+                    next_begin = _parse_date(self._periods[i + 1]["start_date"])
+                    p_end = datetime.combine(next_begin, time.min).replace(tzinfo=tz) - timedelta(seconds=1)
+                else:
+                    p_end = dt_util.now()
+
+                split = await self._consumption_split(p_start, p_end)
+                tariff = {**period}
+                if not tariff.get("night_price"):
+                    tariff["night_price"] = tariff["day_price"]
+                days = (p_end.date() - p_start.date()).days + 1
+                cost = self._costs(split, tariff, days)
+
+                key = f"period_{begin.isoformat()}"
+                data[f"{key}_consumption"] = split["total"]
+                data[f"{key}_costs"] = cost
+                if self._daily_consumption:
+                    data[f"{key}_day_consumption"] = split["day"]
+                if self._nightly_consumption:
+                    data[f"{key}_night_consumption"] = split["night"]
+                if self._balance:
+                    months = (p_end.date() - p_start.date()).days / 30.44
+                    advance = float(period.get("advance_payment", 0.0)) * months
+                    data[f"{key}_balance"] = round(advance - cost, 2)
+                total_costs += cost
+                total_kwh += split["total"]
+
+        data["total_costs"] = round(total_costs, 2)
+        data["total_consumption"] = round(total_kwh, 3)
+        _LOGGER.debug("Energierechner Update: %.2f €, %.3f kWh", total_costs, total_kwh)
+        return data
