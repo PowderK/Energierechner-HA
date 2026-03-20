@@ -1,47 +1,47 @@
 # Energierechner Home Assistant Integration
 
-A Home Assistant port of the [Energierechner Symcon module](https://github.com/Schnittcher/Energierechner) for electricity cost calculation with dynamic tariff periods, day/night rates, and flexible aggregation.
+Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Schnittcher/Energierechner) zur Berechnung von Stromkosten mit dynamischen Tarifperioden, Tag-/Nachttarifen und flexibler Aggregation.
 
-## Features
+## Funktionen
 
-- ✅ Multiple tariff periods with configurable prices
-- ✅ Day/night rate separation (configurable times)
-- ✅ Base price calculation
-- ✅ Balance calculation (advance payment - actual costs)
-- ✅ Time period aggregation:
-  - Daily, previous day
-  - Weekly (current/previous)
-  - Monthly (current/last)
-  - Yearly (current/last)
-  - Custom periods
-- ✅ Flexible consumption/cost tracking
-- ✅ Recorder-based history evaluation
+- ✅ Mehrere Tarifperioden mit konfigurierbaren Preisen
+- ✅ Tag-/Nachttarif-Trennung (konfigurierbare Zeiten)
+- ✅ Grundpreisberechnung
+- ✅ Bilanzberechnung (Abschlag – tatsächliche Kosten)
+- ✅ Zeitraum-Aggregation:
+  - Täglich, Vortag
+  - Wöchentlich (aktuell/vorherig)
+  - Monatlich (aktuell/letzter)
+  - Jährlich (aktuell/letztes)
+  - Benutzerdefinierte Zeiträume
+- ✅ Flexibles Verbrauchs-/Kostens-Tracking
+- ✅ Recorder-basierte Verlaufsauswertung
 
 ## Installation
 
-### Manual Installation
+### Manuelle Installation
 
-1. Clone or download this repository
-2. Copy `custom_components/energierechner/` to your Home Assistant `config/custom_components/` directory
-3. Restart Home Assistant
-4. Add configuration to `configuration.yaml` (see below)
+1. Dieses Repository klonen oder herunterladen
+2. `custom_components/energierechner/` in das Home Assistant `config/custom_components/`-Verzeichnis kopieren
+3. Home Assistant neu starten
+4. Konfiguration in `configuration.yaml` hinzufügen (siehe unten)
 
-### HACS Installation (if published)
+### HACS-Installation (falls veröffentlicht)
 
 ```
-HACS → Integrations → + Create Custom Repository
-URL: https://github.com/Schnittcher/Energierechner-HA
-Category: Integration
+HACS → Integrationen → + Benutzerdefiniertes Repository hinzufügen
+URL: https://github.com/PowderK/Energierechner-HA
+Kategorie: Integration
 ```
 
-## Configuration
+## Konfiguration
 
-Add to your `configuration.yaml`:
+In `configuration.yaml` einfügen:
 
 ```yaml
 sensor:
   - platform: energierechner
-    name: Electricity Costs
+    name: Stromkosten
     source_entity: sensor.energy_consumption_kwh
     active: true
     night_rate: true
@@ -76,90 +76,90 @@ sensor:
         deductions_per_year: 0.2
 ```
 
-## Configuration Parameters
+## Konfigurationsparameter
 
-### Main Parameters
+### Hauptparameter
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `source_entity` | `entity_id` | **required** | Energy consumption sensor (kWh) |
-| `name` | `string` | "Energierechner" | Friendly name |
-| `active` | `boolean` | `true` | Enable/disable integration |
-| `scan_interval` | `integer` | 600 | Update interval in seconds |
+| Parameter | Typ | Standard | Beschreibung |
+|-----------|-----|----------|--------------|
+| `source_entity` | `entity_id` | **Pflicht** | Stromverbrauchs-Sensor (kWh) |
+| `name` | `string` | „Energierechner" | Anzeigename |
+| `active` | `boolean` | `true` | Integration aktivieren/deaktivieren |
+| `scan_interval` | `integer` | 600 | Aktualisierungsintervall in Sekunden |
 
-### Rate Configuration
+### Tarifkonfiguration
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `night_rate` | `boolean` | `false` | Enable night/day rate splitting |
-| `add_base_price` | `boolean` | `false` | Include base price in costs |
-| `periods_calculation` | `boolean` | `false` | Calculate per-period aggregate |
-| `balance` | `boolean` | `false` | Calculate balance per period |
+| Parameter | Typ | Standard | Beschreibung |
+|-----------|-----|----------|--------------|
+| `night_rate` | `boolean` | `false` | Nacht-/Tagtarif-Trennung aktivieren |
+| `add_base_price` | `boolean` | `false` | Grundpreis in die Kosten einrechnen |
+| `periods_calculation` | `boolean` | `false` | Periodenweise Aggregation berechnen |
+| `balance` | `boolean` | `false` | Bilanz pro Periode berechnen |
 
-### Consumption Tracking
+### Verbrauchstracking
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `daily_consumption` | `boolean` | `false` | Track daytime consumption |
-| `nightly_consumption` | `boolean` | `false` | Track nighttime consumption |
+| Parameter | Typ | Standard | Beschreibung |
+|-----------|-----|----------|--------------|
+| `daily_consumption` | `boolean` | `false` | Tagesverbrauch tracken |
+| `nightly_consumption` | `boolean` | `false` | Nachtverbrauch tracken |
 
-### Time Periods (Enable as needed)
+### Zeiträume (bei Bedarf aktivieren)
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `daily` | `boolean` | `false` | Track today |
-| `previous_day` | `boolean` | `false` | Track yesterday |
-| `current_week` | `boolean` | `false` | Track current week |
-| `previous_week` | `boolean` | `false` | Track previous week |
-| `current_month` | `boolean` | `false` | Track current month |
-| `last_month` | `boolean` | `false` | Track last month |
-| `current_year` | `boolean` | `false` | Track current year |
-| `last_year` | `boolean` | `false` | Track last year |
+| Parameter | Typ | Standard | Beschreibung |
+|-----------|-----|----------|--------------|
+| `daily` | `boolean` | `false` | Heutigen Tag tracken |
+| `previous_day` | `boolean` | `false` | Gestern tracken |
+| `current_week` | `boolean` | `false` | Aktuelle Woche tracken |
+| `previous_week` | `boolean` | `false` | Vorherige Woche tracken |
+| `current_month` | `boolean` | `false` | Aktuellen Monat tracken |
+| `last_month` | `boolean` | `false` | Letzten Monat tracken |
+| `current_year` | `boolean` | `false` | Aktuelles Jahr tracken |
+| `last_year` | `boolean` | `false` | Letztes Jahr tracken |
 
-### Period Definition
+### Periodendefinition
 
-Each period in the `periods` list:
+Jede Periode in der `periods`-Liste:
 
 ```yaml
-- start_date: "YYYY-MM-DD"          # Period start date (required)
-  day_price: 0.35                   # Day rate in €/kWh (required)
-  night_price: 0.22                 # Night rate in €/kWh (optional, defaults to day_price)
-  base_price: 140.0                 # Annual base fee in € (optional, default: 0)
-  advance_payment: 65.0             # Monthly advance payment in € (optional, default: 0)
-  deductions_per_year: 0.2          # Deductions per year (optional, default: 0)
-  night_start: "22:00"              # Night period start (HH:MM, optional, default: 22:00)
-  night_end: "06:00"                # Night period end (HH:MM, optional, default: 06:00)
+- start_date: "JJJJ-MM-TT"          # Startdatum der Periode (Pflicht)
+  day_price: 0.35                    # Tagpreis in €/kWh (Pflicht)
+  night_price: 0.22                  # Nachtpreis in €/kWh (optional, Standard: day_price)
+  base_price: 140.0                  # Jährlicher Grundpreis in € (optional, Standard: 0)
+  advance_payment: 65.0              # Monatlicher Abschlag in € (optional, Standard: 0)
+  deductions_per_year: 0.2           # Abzüge pro Jahr (optional, Standard: 0)
+  night_start: "22:00"               # Beginn der Nachtzeit (HH:MM, optional, Standard: 22:00)
+  night_end: "06:00"                 # Ende der Nachtzeit (HH:MM, optional, Standard: 06:00)
 ```
 
-## Sensor Output
+## Sensor-Ausgabe
 
-The integration creates a sensor entity with:
+Die Integration erstellt eine Sensor-Entität mit:
 
-- **State**: Aggregated total costs (€)
-- **Attributes**:
-  - `total_consumption`: Total consumption (kWh)
-  - `total_costs`: Total costs (€)
+- **Zustand**: Aggregierte Gesamtkosten (€)
+- **Attribute**:
+  - `total_consumption`: Gesamtverbrauch (kWh)
+  - `total_costs`: Gesamtkosten (€)
   - `today_consumption`, `today_costs`
   - `previous_day_consumption`, `previous_day_costs`
   - `current_week_consumption`, `current_week_costs`
-  - Similar for all configured time periods...
-  - `period_<YYYY-MM-DD>_consumption`
-  - `period_<YYYY-MM-DD>_costs`
-  - `period_<YYYY-MM-DD>_balance` (if balance enabled)
+  - Analog für alle konfigurierten Zeiträume…
+  - `period_<JJJJ-MM-TT>_consumption`
+  - `period_<JJJJ-MM-TT>_costs`
+  - `period_<JJJJ-MM-TT>_balance` (wenn Bilanz aktiviert)
 
 ## Blueprint
 
-A blueprint is included for generating YAML configuration via the Home Assistant UI. See `blueprints/automation/energierechner_config.yaml`.
+Ein Blueprint ist enthalten, um die YAML-Konfiguration über die Home Assistant UI zu generieren. Siehe `blueprints/automation/energierechner_config.yaml`.
 
-To use:
-1. Settings → Automations & Scenes → Blueprints
-2. Import the blueprint file
-3. Create automation with your parameters
-4. Copy generated YAML configuration
+Verwendung:
+1. Einstellungen → Automatisierungen & Szenen → Blueprints
+2. Blueprint-Datei importieren
+3. Automatisierung mit eigenen Parametern erstellen
+4. Generierten YAML-Code kopieren
 
 ## Debugging
 
-Enable debug logging in `configuration.yaml`:
+Debug-Logging in `configuration.yaml` aktivieren:
 
 ```yaml
 logger:
@@ -167,22 +167,22 @@ logger:
     custom_components.energierechner: debug
 ```
 
-View logs in: Settings → System → Logs
+Logs ansehen unter: Einstellungen → System → Protokolle
 
-## Requirements
+## Voraussetzungen
 
-- Home Assistant 2023.1 or newer
-- Recorder integration enabled (default)
-- Energy consumption sensor providing kWh values
+- Home Assistant 2023.1 oder neuer
+- Recorder-Integration aktiviert (Standard)
+- Stromverbrauchs-Sensor mit kWh-Werten
 
-## License
+## Lizenz
 
-See LICENSE file
+Siehe LICENSE-Datei
 
-## Credits
+## Danksagung
 
-Original Symcon module by [Schnittcher](https://github.com/Schnittcher)
+Originales Symcon-Modul von [Schnittcher](https://github.com/Schnittcher)
 
 ## Support
 
-For issues or feature requests, please open an issue in the GitHub repository.
+Bei Problemen oder Feature-Wünschen bitte ein Issue im GitHub-Repository eröffnen.
