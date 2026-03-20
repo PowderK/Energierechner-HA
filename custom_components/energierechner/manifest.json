@@ -1,11 +1,12 @@
 {
   "domain": "energierechner",
   "name": "Energierechner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "documentation": "https://github.com/PowderK/Energierechner-HA",
   "issue_tracker": "https://github.com/PowderK/Energierechner-HA/issues",
   "requirements": [],
-  "dependencies": [],
+  "dependencies": ["recorder"],
   "codeowners": ["@PowderK"],
-  "iot_class": "local_polling"
+  "iot_class": "local_polling",
+  "config_flow": true
 }

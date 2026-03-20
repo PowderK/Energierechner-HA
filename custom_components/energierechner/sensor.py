@@ -1,17 +1,17 @@
-"""Sensor platform for Energierechner."""
+"""Sensor-Plattform für Energierechner (Config Entry basiert)."""
 from __future__ import annotations
 
 import logging
 from datetime import datetime, date, time, timedelta
 from typing import Any
 
-import voluptuous as vol
-from homeassistant.components import history
-from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
-from homeassistant.const import (ATTR_FRIENDLY_NAME, CONF_ENTITY_ID, CONF_NAME,
-                                 CONF_SCAN_INTERVAL, ENERGY_KILO_WATT_HOUR)
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import config_validation as cv
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.history import state_changes_during_period
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfEnergy
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 
@@ -36,142 +36,127 @@ from .const import (
     CONF_SOURCE_ENTITY,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-PERIOD_SCHEMA = vol.Schema({
-    vol.Required("start_date"): cv.string,
-    vol.Required("day_price"): vol.Coerce(float),
-    vol.Optional("night_price"): vol.Coerce(float),
-    vol.Optional("base_price", default=0.0): vol.Coerce(float),
-    vol.Optional("advance_payment", default=0.0): vol.Coerce(float),
-    vol.Optional("deductions_per_year", default=0.0): vol.Coerce(float),
-    vol.Optional("night_start", default="22:00"): cv.time,
-    vol.Optional("night_end", default="06:00"): cv.time,
-})
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_SOURCE_ENTITY): cv.entity_id,
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    vol.Optional(CONF_PERIODS, default=[]): vol.All(cv.ensure_list, [PERIOD_SCHEMA]),
-    vol.Optional(CONF_ACTIVE, default=True): cv.boolean,
-    vol.Optional(CONF_NIGHT_RATE, default=False): cv.boolean,
-    vol.Optional(CONF_DAILY_CONSUMPTION, default=False): cv.boolean,
-    vol.Optional(CONF_NIGHTLY_CONSUMPTION, default=False): cv.boolean,
-    vol.Optional(CONF_PERIODS_CALCULATION, default=False): cv.boolean,
-    vol.Optional(CONF_BALANCE, default=False): cv.boolean,
-    vol.Optional(CONF_DAILY, default=False): cv.boolean,
-    vol.Optional(CONF_PREVIOUS_DAY, default=False): cv.boolean,
-    vol.Optional(CONF_CURRENT_WEEK, default=False): cv.boolean,
-    vol.Optional(CONF_PREVIOUS_WEEK, default=False): cv.boolean,
-    vol.Optional(CONF_CURRENT_MONTH, default=False): cv.boolean,
-    vol.Optional(CONF_LAST_MONTH, default=False): cv.boolean,
-    vol.Optional(CONF_CURRENT_YEAR, default=False): cv.boolean,
-    vol.Optional(CONF_LAST_YEAR, default=False): cv.boolean,
-    vol.Optional(CONF_ADD_BASE_PRICE, default=False): cv.boolean,
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.positive_int,
-})
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Sensor über Config Entry einrichten."""
+    # Basisdaten + eventuelle Options zusammenführen
+    data = {**entry.data}
+    if entry.options:
+        data.update(entry.options)
 
+    sensor = EnergierechnerSensor(hass, data, entry.entry_id)
+    async_add_entities([sensor], update_before_add=True)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _parse_date(iso_date: str) -> date:
     return dt_util.parse_date(iso_date)
 
 
 def _is_night(timestamp: datetime, night_start: time, night_end: time) -> bool:
+    """Gibt True zurück wenn der Zeitpunkt in der Nachtzeit liegt."""
+    t = timestamp.time().replace(second=0, microsecond=0)
     if night_start < night_end:
-        return night_start <= timestamp.time() < night_end
-    return timestamp.time() >= night_start or timestamp.time() < night_end
+        return night_start <= t < night_end
+    # Mitternacht übergreifend
+    return t >= night_start or t < night_end
 
 
-def _to_datetime(val: str | datetime) -> datetime:
-    if isinstance(val, datetime):
+def _time_from_str(val) -> time:
+    """Konvertiert 'HH:MM'-String oder time-Objekt."""
+    if isinstance(val, time):
         return val
-    return dt_util.parse_datetime(val)
+    if isinstance(val, str):
+        parts = val.split(":")
+        return time(int(parts[0]), int(parts[1]))
+    return time(22, 0)
 
 
-def _get_period_start_end(period_keyword: str) -> tuple[datetime, datetime]:
+def _get_period_start_end(keyword: str) -> tuple[datetime, datetime]:
     today = dt_util.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    if period_keyword == "today":
-        start = today
-        end = today + timedelta(days=1) - timedelta(seconds=1)
-    elif period_keyword == "previous_day":
+    if keyword == "today":
+        return today, today + timedelta(days=1) - timedelta(seconds=1)
+    elif keyword == "previous_day":
         start = today - timedelta(days=1)
-        end = today - timedelta(seconds=1)
-    elif period_keyword == "current_week":
-        start = (today - timedelta(days=today.weekday()))
-        end = start + timedelta(days=7) - timedelta(seconds=1)
-    elif period_keyword == "previous_week":
-        start = (today - timedelta(days=today.weekday() + 7))
-        end = start + timedelta(days=7) - timedelta(seconds=1)
-    elif period_keyword == "current_month":
+        return start, today - timedelta(seconds=1)
+    elif keyword == "current_week":
+        start = today - timedelta(days=today.weekday())
+        return start, start + timedelta(days=7) - timedelta(seconds=1)
+    elif keyword == "previous_week":
+        start = today - timedelta(days=today.weekday() + 7)
+        return start, start + timedelta(days=7) - timedelta(seconds=1)
+    elif keyword == "current_month":
         start = today.replace(day=1)
         next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
-        end = next_month - timedelta(seconds=1)
-    elif period_keyword == "last_month":
+        return start, next_month - timedelta(seconds=1)
+    elif keyword == "last_month":
         start = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
-        next_month = today.replace(day=1)
-        end = next_month - timedelta(seconds=1)
-    elif period_keyword == "current_year":
+        return start, today.replace(day=1) - timedelta(seconds=1)
+    elif keyword == "current_year":
         start = today.replace(month=1, day=1)
-        end = today.replace(month=12, day=31, hour=23, minute=59, second=59)
-    elif period_keyword == "last_year":
+        return start, today.replace(month=12, day=31, hour=23, minute=59, second=59)
+    elif keyword == "last_year":
         start = today.replace(year=today.year - 1, month=1, day=1)
         end = today.replace(year=today.year - 1, month=12, day=31, hour=23, minute=59, second=59)
-    else:
-        raise ValueError("invalid period keyword")
-    return start, end
+        return start, end
+    raise ValueError(f"Unbekanntes Zeitraum-Schlüsselwort: {keyword}")
 
 
-async def async_setup_platform(hass: HomeAssistant, config: dict, async_add_entities, discovery_info=None):
-    if not config[CONF_ACTIVE]:
-        _LOGGER.debug("Energierechner is disabled by configuration")
-        return
-
-    entity = EnergierechnerSensor(config)
-    async_add_entities([entity], True)
-
+# ---------------------------------------------------------------------------
+# Sensor
+# ---------------------------------------------------------------------------
 
 class EnergierechnerSensor(SensorEntity):
-    """Energierechner sensor entity."""
+    """Stromkosten-Sensor auf Basis von Recorder-Daten."""
 
+    _attr_has_entity_name = True
     _attr_should_poll = False
+    _attr_native_unit_of_measurement = "€"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_icon = "mdi:lightning-bolt-circle"
 
-    def __init__(self, config: dict):
-        self._name = config[CONF_NAME]
+    def __init__(self, hass: HomeAssistant, config: dict, entry_id: str) -> None:
+        self.hass = hass
+        self._name = config.get(CONF_NAME, DEFAULT_NAME)
         self._source_entity_id = config[CONF_SOURCE_ENTITY]
-        self._periods = sorted(config[CONF_PERIODS], key=lambda p: _parse_date(p["start_date"]))
-        self._night_rate = config[CONF_NIGHT_RATE]
-        self._daily_consumption = config[CONF_DAILY_CONSUMPTION]
-        self._nightly_consumption = config[CONF_NIGHTLY_CONSUMPTION]
-        self._periods_calculation = config[CONF_PERIODS_CALCULATION]
-        self._balance = config[CONF_BALANCE]
-        self._daily = config[CONF_DAILY]
-        self._previous_day = config[CONF_PREVIOUS_DAY]
-        self._current_week = config[CONF_CURRENT_WEEK]
-        self._previous_week = config[CONF_PREVIOUS_WEEK]
-        self._current_month = config[CONF_CURRENT_MONTH]
-        self._last_month = config[CONF_LAST_MONTH]
-        self._current_year = config[CONF_CURRENT_YEAR]
-        self._last_year = config[CONF_LAST_YEAR]
-        self._add_base_price = config[CONF_ADD_BASE_PRICE]
-        self._scan_interval = timedelta(seconds=config[CONF_SCAN_INTERVAL])
-
-        self._state = 0.0
-        self._attr_native_unit_of_measurement = "€"
-        self._attr_icon = "mdi:calculator"
-        self._data = {}
-        self._remove_listener = None
-
-    async def async_added_to_hass(self):
-        self._remove_listener = async_track_time_interval(
-            self.hass, self._async_update_data, self._scan_interval
+        self._periods = sorted(
+            config.get(CONF_PERIODS, []),
+            key=lambda p: _parse_date(p["start_date"])
         )
-        await self._async_update_data(None)
+        self._night_rate = config.get(CONF_NIGHT_RATE, False)
+        self._daily_consumption = config.get(CONF_DAILY_CONSUMPTION, False)
+        self._nightly_consumption = config.get(CONF_NIGHTLY_CONSUMPTION, False)
+        self._periods_calculation = config.get(CONF_PERIODS_CALCULATION, True)
+        self._balance = config.get(CONF_BALANCE, False)
+        self._daily = config.get(CONF_DAILY, True)
+        self._previous_day = config.get(CONF_PREVIOUS_DAY, True)
+        self._current_week = config.get(CONF_CURRENT_WEEK, True)
+        self._previous_week = config.get(CONF_PREVIOUS_WEEK, False)
+        self._current_month = config.get(CONF_CURRENT_MONTH, True)
+        self._last_month = config.get(CONF_LAST_MONTH, False)
+        self._current_year = config.get(CONF_CURRENT_YEAR, True)
+        self._last_year = config.get(CONF_LAST_YEAR, False)
+        self._add_base_price = config.get(CONF_ADD_BASE_PRICE, False)
+        self._scan_interval = timedelta(seconds=int(config.get("scan_interval", DEFAULT_SCAN_INTERVAL)))
 
-    async def async_will_remove_from_hass(self):
-        if self._remove_listener is not None:
-            self._remove_listener()
+        self._entry_id = entry_id
+        self._attr_unique_id = f"{entry_id}_sensor"
+        self._state: float = 0.0
+        self._data: dict[str, Any] = {}
+        self._remove_listener = None
 
     @property
     def name(self) -> str:
@@ -185,170 +170,207 @@ class EnergierechnerSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return self._data
 
-    async def _async_get_consumption_split(self, start: datetime, end: datetime) -> dict[str, float]:
-        states = await history.get_state_changes(self.hass, start, end, self._source_entity_id)
-        if not states:
+    async def async_added_to_hass(self) -> None:
+        self._remove_listener = async_track_time_interval(
+            self.hass, self._async_update_data, self._scan_interval
+        )
+        await self._async_update_data(None)
+
+    async def async_will_remove_from_hass(self) -> None:
+        if self._remove_listener is not None:
+            self._remove_listener()
+
+    # ------------------------------------------------------------------ Recorder
+    async def _async_get_states(self, start: datetime, end: datetime) -> list:
+        """Liest Zustandsänderungen aus dem Recorder."""
+        try:
+            states_dict: dict = await get_instance(self.hass).async_add_executor_job(
+                state_changes_during_period,
+                self.hass,
+                start,
+                end,
+                self._source_entity_id,
+                False,   # no_attributes
+                None,    # limit
+                True,    # include_start_time_state
+            )
+            return states_dict.get(self._source_entity_id, [])
+        except Exception as err:
+            _LOGGER.warning("Recorder-Fehler beim Lesen des Verlaufs: %s", err)
+            return []
+
+    async def _async_get_consumption_split(
+        self, start: datetime, end: datetime
+    ) -> dict[str, float]:
+        """Berechnet Gesamt-, Tag- und Nachtverbrauch für einen Zeitraum."""
+        states = await self._async_get_states(start, end)
+        if len(states) < 2:
             return {"consumption": 0.0, "day": 0.0, "night": 0.0}
 
-        # Take first and last to get total consumption
-        def _safe_state_value(state: State) -> float:
+        def _val(state) -> float:
             try:
                 return float(state.state)
             except (TypeError, ValueError):
                 return 0.0
 
-        total_consumption = max(0.0, _safe_state_value(states[-1]) - _safe_state_value(states[0]))
+        total_consumption = max(0.0, _val(states[-1]) - _val(states[0]))
         day_consumption = 0.0
         night_consumption = 0.0
 
-        if not self._periods or not self._night_rate:
+        if not self._night_rate or not self._periods:
             return {"consumption": total_consumption, "day": total_consumption, "night": 0.0}
 
-        # split by averaged interval midpoint
-        prev_state = states[0]
-        prev_value = _safe_state_value(prev_state)
-        prev_timestamp = prev_state.last_updated or prev_state.last_changed
+        prev_value = _val(states[0])
+        prev_ts = states[0].last_updated or states[0].last_changed
 
         for state in states[1:]:
-            now_value = _safe_state_value(state)
-            now_timestamp = state.last_updated or state.last_changed
-            delta = now_value - prev_value
-            if delta > 0 and now_timestamp and prev_timestamp:
-                midpoint = prev_timestamp + (now_timestamp - prev_timestamp) / 2
-                period = self._get_tariff_for_timestamp(midpoint)
-                night_start = period.get("night_start") if period else time(22, 0)
-                night_end = period.get("night_end") if period else time(6, 0)
-                if _is_night(midpoint, night_start, night_end):
+            cur_value = _val(state)
+            cur_ts = state.last_updated or state.last_changed
+            delta = cur_value - prev_value
+            if delta > 0 and cur_ts and prev_ts:
+                midpoint = prev_ts + (cur_ts - prev_ts) / 2
+                tariff = self._get_tariff_for_timestamp(midpoint)
+                ns = _time_from_str(tariff.get("night_start", "22:00")) if tariff else time(22, 0)
+                ne = _time_from_str(tariff.get("night_end", "06:00")) if tariff else time(6, 0)
+                if _is_night(midpoint, ns, ne):
                     night_consumption += delta
                 else:
                     day_consumption += delta
-            prev_state = state
-            prev_value = now_value
-            prev_timestamp = now_timestamp
-
-        if not self._night_rate:
-            day_consumption = total_consumption
-            night_consumption = 0.0
+            prev_value = cur_value
+            prev_ts = cur_ts
 
         return {
-            "consumption": total_consumption,
+            "consumption": round(total_consumption, 3),
             "day": round(day_consumption, 3),
             "night": round(night_consumption, 3),
         }
 
+    # ------------------------------------------------------------------ Tariff
     def _get_tariff_for_timestamp(self, timestamp: datetime) -> dict[str, Any] | None:
         if not self._periods:
             return None
-
-        sorted_periods = sorted(self._periods, key=lambda p: _parse_date(p["start_date"]))
-
-        current_period = sorted_periods[0]
-        for p in sorted_periods:
+        current = self._periods[0]
+        for p in self._periods:
             if _parse_date(p["start_date"]) <= timestamp.date():
-                current_period = p
-            else:
-                break
-        if current_period.get("night_price", 0.0) == 0.0:
-            current_period["night_price"] = current_period["day_price"]
-        return current_period
+                current = p
+        # night_price darf nicht fehlen
+        if not current.get("night_price"):
+            current = {**current, "night_price": current["day_price"]}
+        return current
 
-    async def _async_update_data(self, now):
-        if not self._periods or not self._daily and not self._previous_day and not self._current_week and not self._previous_week and not self._current_month and not self._last_month and not self._current_year and not self._last_year and not self._periods_calculation:
+    # ------------------------------------------------------------------ Update
+    async def _async_update_data(self, _now) -> None:
+        """Hauptberechnungsroutine."""
+        has_any_period = (
+            self._daily or self._previous_day or self._current_week
+            or self._previous_week or self._current_month or self._last_month
+            or self._current_year or self._last_year or self._periods_calculation
+        )
+        if not self._periods or not has_any_period:
             self._state = 0.0
             self._data = {}
+            self.async_write_ha_state()
             return
 
         total_costs = 0.0
         total_consumption = 0.0
         attributes: dict[str, Any] = {}
 
-        async def calculate_for_period(keyword: str, label: str):
+        # ------------------------------------------------ Zeitraum berechnen
+        async def _calc(keyword: str, label: str) -> None:
             nonlocal total_costs, total_consumption
             start, end = _get_period_start_end(keyword)
-            consumption_block = await self._async_get_consumption_split(start, end)
-            period_costs, period_consumption = 0.0, consumption_block["consumption"]
-
-            # price by midpoint of period
-            if self._periods:
-                period_tariff = self._get_tariff_for_timestamp(start)
-                if period_tariff:
-                    day_price = float(period_tariff["day_price"])
-                    night_price = float(period_tariff.get("night_price", day_price))
-                else:
-                    day_price = 0.0
-                    night_price = 0.0
-            else:
-                day_price = 0.0
-                night_price = 0.0
+            split = await self._async_get_consumption_split(start, end)
+            consumption = split["consumption"]
+            tariff = self._get_tariff_for_timestamp(start)
+            day_p = float(tariff["day_price"]) if tariff else 0.0
+            night_p = float(tariff.get("night_price") or day_p) if tariff else 0.0
 
             if self._night_rate:
-                period_costs = (consumption_block["day"] * day_price) + (consumption_block["night"] * night_price)
+                costs = split["day"] * day_p + split["night"] * night_p
             else:
-                period_costs = period_consumption * day_price
+                costs = consumption * day_p
 
-            if self._add_base_price and self._periods:
-                if period_tariff:
-                    base_price = float(period_tariff.get("base_price", 0.0))
-                    if base_price > 0:
-                        daycount = (end.date() - start.date()).days + 1
-                        period_costs += base_price / 365 * daycount
+            if self._add_base_price and tariff:
+                base = float(tariff.get("base_price", 0.0))
+                if base > 0:
+                    days = (end.date() - start.date()).days + 1
+                    costs += base / 365 * days
 
-            attributes[f"{label}_consumption"] = round(period_consumption, 3)
-            attributes[f"{label}_costs"] = round(period_costs, 3)
-            total_costs += period_costs
-            total_consumption += period_consumption
+            attributes[f"{label}_consumption"] = round(consumption, 3)
+            attributes[f"{label}_costs"] = round(costs, 3)
+            if self._daily_consumption:
+                attributes[f"{label}_day_consumption"] = round(split["day"], 3)
+            if self._nightly_consumption:
+                attributes[f"{label}_night_consumption"] = round(split["night"], 3)
+
+            nonlocal total_costs, total_consumption
+            total_costs += costs
+            total_consumption += consumption
 
         if self._daily:
-            await calculate_for_period("today", "today")
+            await _calc("today", "today")
         if self._previous_day:
-            await calculate_for_period("previous_day", "previous_day")
+            await _calc("previous_day", "previous_day")
         if self._current_week:
-            await calculate_for_period("current_week", "current_week")
+            await _calc("current_week", "current_week")
         if self._previous_week:
-            await calculate_for_period("previous_week", "previous_week")
+            await _calc("previous_week", "previous_week")
         if self._current_month:
-            await calculate_for_period("current_month", "current_month")
+            await _calc("current_month", "current_month")
         if self._last_month:
-            await calculate_for_period("last_month", "last_month")
+            await _calc("last_month", "last_month")
         if self._current_year:
-            await calculate_for_period("current_year", "current_year")
+            await _calc("current_year", "current_year")
         if self._last_year:
-            await calculate_for_period("last_year", "last_year")
+            await _calc("last_year", "last_year")
 
-        if self._periods_calculation and self._periods:
-            for period in self._periods:
-                begin = dt_util.parse_date(period["start_date"])
+        # ------------------------------------------------ Periodenberechnung
+        if self._periods_calculation:
+            sorted_periods = sorted(self._periods, key=lambda p: _parse_date(p["start_date"]))
+            for i, period in enumerate(sorted_periods):
+                begin = _parse_date(period["start_date"])
                 if begin is None:
                     continue
-                start = datetime.combine(begin, time.min)
-                next_period = None
-                candidates = [p for p in self._periods if _parse_date(p["start_date"]) > begin]
-                if candidates:
-                    next_begin = min(_parse_date(p["start_date"]) for p in candidates)
-                    next_period = datetime.combine(next_begin, time.min)
-                end = (next_period - timedelta(seconds=1)) if next_period else dt_util.now()
+                p_start = datetime.combine(begin, time.min, tzinfo=dt_util.now().tzinfo)
 
-                consumption_block = await self._async_get_consumption_split(start, end)
-                day_price = float(period["day_price"])
-                night_price = float(period.get("night_price") or day_price)
+                if i + 1 < len(sorted_periods):
+                    next_begin = _parse_date(sorted_periods[i + 1]["start_date"])
+                    p_end = datetime.combine(next_begin, time.min, tzinfo=dt_util.now().tzinfo) - timedelta(seconds=1)
+                else:
+                    p_end = dt_util.now()
 
-                period_costs = (consumption_block["day"] * day_price) + (consumption_block["night"] * night_price)
+                split = await self._async_get_consumption_split(p_start, p_end)
+                consumption = split["consumption"]
+                day_p = float(period["day_price"])
+                night_p = float(period.get("night_price") or day_p)
+
+                if self._night_rate:
+                    costs = split["day"] * day_p + split["night"] * night_p
+                else:
+                    costs = consumption * day_p
+
                 if self._add_base_price:
-                    daycount = (end.date() - start.date()).days + 1
-                    period_costs += float(period.get("base_price", 0.0)) / 365 * daycount
+                    base = float(period.get("base_price", 0.0))
+                    if base > 0:
+                        days = (p_end.date() - p_start.date()).days + 1
+                        costs += base / 365 * days
 
                 key = f"period_{begin.isoformat()}"
-                attributes[f"{key}_consumption"] = round(consumption_block["consumption"], 3)
-                attributes[f"{key}_costs"] = round(period_costs, 3)
-                total_costs += period_costs
-                total_consumption += consumption_block["consumption"]
+                attributes[f"{key}_consumption"] = round(consumption, 3)
+                attributes[f"{key}_costs"] = round(costs, 3)
+                total_costs += costs
+                total_consumption += consumption
 
                 if self._balance:
-                    balance = float(period.get("advance_payment", 0.0)) * float(period.get("deductions_per_year", 0.0)) - period_costs
-                    attributes[f"{key}_balance"] = round(balance, 2)
+                    # Bilanz = Summe aller Abschläge im Zeitraum – tatsächliche Kosten
+                    months = (p_end.date() - p_start.date()).days / 30.44
+                    advance_total = float(period.get("advance_payment", 0.0)) * months
+                    attributes[f"{key}_balance"] = round(advance_total - costs, 2)
 
         self._state = round(total_costs, 2)
         attributes["total_consumption"] = round(total_consumption, 3)
         attributes["total_costs"] = round(total_costs, 2)
         self._data = attributes
         self.async_write_ha_state()
+        _LOGGER.debug("Energierechner aktualisiert: %.2f €", self._state)

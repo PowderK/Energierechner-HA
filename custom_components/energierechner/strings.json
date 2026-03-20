@@ -1,0 +1,79 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grundkonfiguration",
+        "data": {
+          "name": "Sensorname",
+          "source_entity": "Stromzähler (kWh-Sensor)",
+          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+        }
+      },
+      "features": {
+        "title": "Funktionen auswählen",
+        "data": {
+          "night_rate": "Nachttarif verwenden",
+          "add_base_price": "Grundpreis einrechnen",
+          "daily_consumption": "Tagesverbrauch (Tag) ausgeben",
+          "nightly_consumption": "Nachtverbrauch ausgeben",
+          "periods_calculation": "Periodenberechnung aktivieren",
+          "balance": "Bilanz (Abschlag – Kosten) berechnen",
+          "daily": "Heutiger Tag",
+          "previous_day": "Gestern",
+          "current_week": "Aktuelle Woche",
+          "previous_week": "Vorherige Woche",
+          "current_month": "Aktueller Monat",
+          "last_month": "Letzter Monat",
+          "current_year": "Aktuelles Jahr",
+          "last_year": "Letztes Jahr"
+        }
+      },
+      "periods": {
+        "title": "Tarifperioden eingeben",
+        "description": "Gib deine Tarifperioden als YAML-Liste ein. Jede Periode beginnt mit einem Startdatum.",
+        "data": {
+          "periods_yaml": "Tarifperioden (YAML)"
+        }
+      }
+    },
+    "error": {
+      "invalid_yaml": "Ungültiges YAML-Format – bitte Syntax prüfen.",
+      "not_a_list": "Die Eingabe muss eine YAML-Liste sein (Zeilen beginnend mit '- ')."
+    },
+    "abort": {
+      "already_configured": "Diese Integration ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "features": {
+        "title": "Funktionen bearbeiten",
+        "data": {
+          "night_rate": "Nachttarif verwenden",
+          "add_base_price": "Grundpreis einrechnen",
+          "daily_consumption": "Tagesverbrauch (Tag) ausgeben",
+          "nightly_consumption": "Nachtverbrauch ausgeben",
+          "periods_calculation": "Periodenberechnung aktivieren",
+          "balance": "Bilanz (Abschlag – Kosten) berechnen",
+          "daily": "Heutiger Tag",
+          "previous_day": "Gestern",
+          "current_week": "Aktuelle Woche",
+          "previous_week": "Vorherige Woche",
+          "current_month": "Aktueller Monat",
+          "last_month": "Letzter Monat",
+          "current_year": "Aktuelles Jahr",
+          "last_year": "Letztes Jahr"
+        }
+      },
+      "periods": {
+        "title": "Tarifperioden bearbeiten",
+        "data": {
+          "periods_yaml": "Tarifperioden (YAML)"
+        }
+      }
+    },
+    "error": {
+      "invalid_yaml": "Ungültiges YAML-Format – bitte Syntax prüfen."
+    }
+  }
+}
