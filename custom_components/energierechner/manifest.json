@@ -1,0 +1,9 @@
+{
+  "domain": "energierechner",
+  "name": "Energierechner",
+  "version": "1.0.0",
+  "documentation": "https://github.com/Schnittcher/Energierechner",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": []
+}

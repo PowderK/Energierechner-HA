@@ -1,0 +1,66 @@
+blueprint:
+  name: Energierechner Sensor Konfiguration
+  description: "Erzeugt einen konfigurierbaren YAML-Block für den Energierechner Sensor (kann kopiert und in configuration.yaml eingefügt werden)."
+  domain: automation
+  input:
+    source_entity:
+      name: Verbrauchsquelle (kWh-Sensor)
+      selector:
+        entity:
+          domain: sensor
+    sensor_name:
+      name: Sensorname
+      selector:
+        text:
+    night_rate:
+      name: Nachttarif verwenden
+      selector:
+        boolean: {}
+      default: false
+    daily_consumption:
+      name: Tagesverbrauch ausgeben
+      selector:
+        boolean: {}
+      default: false
+    nightly_consumption:
+      name: Nachtverbrauch ausgeben
+      selector:
+        boolean: {}
+      default: false
+    periods_calculation:
+      name: Periodenberechnung aktivieren
+      selector:
+        boolean: {}
+      default: false
+    add_base_price:
+      name: Grundpreis addieren
+      selector:
+        boolean: {}
+      default: false
+    blueprint_periods:
+      name: Tarifperioden (YAML-Liste)
+      description: |
+        Beispiel:
+          - start_date: "2024-01-01"
+            day_price: 0.35
+            night_price: 0.22
+            base_price: 140.0
+            advance_payment: 65.0
+            deductions_per_year: 0.2
+            night_start: "22:00"
+            night_end: "06:00"
+      selector:
+        text:
+          multiline: true
+      default: "- start_date: \"2024-01-01\"\n  day_price: 0.35\n  night_price: 0.22\n  base_price: 140.0\n  advance_payment: 65.0\n  deductions_per_year: 0.2\n  night_start: \"22:00\"\n  night_end: \"06:00\"\n"
+
+trigger:
+  - platform: state
+    entity_id: !input source_entity
+
+action:
+  - service: persistent_notification.create
+    data:
+      title: "Energierechner Konfigurationsblock"
+      message: >
+        Kopiere diesen Block in deine configuration.yaml unter sensor:\n\n        - platform: energierechner\n          name: "{{ input.sensor_name }}"\n          source_entity: "{{ input.source_entity }}"\n          active: true\n          night_rate: {{ input.night_rate }}\n          daily_consumption: {{ input.daily_consumption }}\n          nightly_consumption: {{ input.nightly_consumption }}\n          periods_calculation: {{ input.periods_calculation }}\n          add_base_price: {{ input.add_base_price }}\n          periods: |\n            {{ input.blueprint_periods | replace('\n', '\n            ') }}\n
