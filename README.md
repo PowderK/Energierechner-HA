@@ -92,7 +92,27 @@ cards:
       - type: entity
         entity: sensor.energierechner_aktuelles_jahr_verbrauch
         name: Verbrauch Jahr
+  - type: statistics-graph
+    title: Verbrauch (Letzte 7 Tage)
+    chart_type: bar
+    period: day
+    days_to_show: 7
+    stat_types:
+      - change
+    entities:
+      - sensor.energierechner_gesamtverbrauch
+  - type: statistics-graph
+    title: Kosten (Letzte 7 Tage)
+    chart_type: bar
+    period: day
+    days_to_show: 7
+    stat_types:
+      - change
+    entities:
+      - sensor.energierechner_gesamtkosten
 ```
+
+> **Tipp zum Diagramm**: Die beiden `statistics-graph` Karten (Balkendiagramme) werten automatisch die Langzeitstatistiken (`state_class: total`) aus. Sie zeigen dir deinen exakten täglichen Verbrauch und die Kosten der letzten 7 Tage als Säulen an. Du kannst `period` auch auf `month` stellen, um die laufenden Monate dieses Jahres miteinander zu vergleichen!
 
 > **Tipp:** Wenn du die [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row) HACS Frontend-Karte verwendest, lassen sich Kosten und Verbrauch noch kompakter in *einer* Zeile kombinieren.
 
