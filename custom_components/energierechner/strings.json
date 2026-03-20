@@ -28,17 +28,29 @@
           "last_year": "Letztes Jahr"
         }
       },
-      "periods": {
-        "title": "Tarifperioden eingeben",
-        "description": "Gib deine Tarifperioden als YAML-Liste ein. Jede Periode beginnt mit einem Startdatum.",
+      "menu": {
+        "title": "Setup-Menü: Optionen & Tarife",
+        "description": "Was möchtest du als nächstes tun?",
         "data": {
-          "periods_yaml": "Tarifperioden (YAML)"
+          "action": "Aktion auswählen"
+        }
+      },
+      "edit_period": {
+        "title": "Tarifperiode konfigurieren",
+        "data": {
+          "start_date": "Gültig ab (Datum)",
+          "day_price": "Tagpreis (€ pro kWh)",
+          "night_price": "Nachtpreis (€ pro kWh)",
+          "base_price": "Grundpreis (€ pro Jahr)",
+          "advance_payment": "Abschlag (€ pro Monat)",
+          "night_start": "Nachttarif beginnt um",
+          "night_end": "Nachttarif endet um",
+          "delete_period": "🗑️ Diese Periode löschen"
         }
       }
     },
     "error": {
-      "invalid_yaml": "Ungültiges YAML-Format – bitte Syntax prüfen.",
-      "not_a_list": "Die Eingabe muss eine YAML-Liste sein (Zeilen beginnend mit '- ')."
+      "invalid_date": "Ungültiges Datum. Bitte neu eingeben."
     },
     "abort": {
       "already_configured": "Diese Integration ist bereits eingerichtet."
@@ -46,8 +58,15 @@
   },
   "options": {
     "step": {
+      "menu": {
+        "title": "Energierechner Einstellungen",
+        "description": "Was möchtest du bearbeiten?",
+        "data": {
+          "action": "Aktion auswählen"
+        }
+      },
       "features": {
-        "title": "Funktionen bearbeiten",
+        "title": "Funktionen & Zeiträume",
         "data": {
           "night_rate": "Nachttarif verwenden",
           "add_base_price": "Grundpreis einrechnen",
@@ -65,15 +84,22 @@
           "last_year": "Letztes Jahr"
         }
       },
-      "periods": {
-        "title": "Tarifperioden bearbeiten",
+      "edit_period": {
+        "title": "Tarifperiode bearbeiten",
         "data": {
-          "periods_yaml": "Tarifperioden (YAML)"
+          "start_date": "Gültig ab (Datum)",
+          "day_price": "Tagpreis (€ pro kWh)",
+          "night_price": "Nachtpreis (€ pro kWh)",
+          "base_price": "Grundpreis (€ pro Jahr)",
+          "advance_payment": "Abschlag (€ pro Monat)",
+          "night_start": "Nachttarif beginnt um",
+          "night_end": "Nachttarif endet um",
+          "delete_period": "🗑️ Diese Periode LÖSCHEN"
         }
       }
     },
     "error": {
-      "invalid_yaml": "Ungültiges YAML-Format – bitte Syntax prüfen."
+      "invalid_date": "Ungültiges Datum. Bitte neu eingeben."
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "domain": "energierechner",
   "name": "Energierechner",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "documentation": "https://github.com/PowderK/Energierechner-HA",
   "issue_tracker": "https://github.com/PowderK/Energierechner-HA/issues",
   "requirements": [],

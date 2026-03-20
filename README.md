@@ -43,26 +43,9 @@ Nach dem Neustart:
 Der dreistufige Assistent führt durch:
 1. **Grundkonfiguration** – Sensorname, kWh-Quelle, Aktualisierungsintervall
 2. **Funktionen** – Aktivierung von Tag-/Nachttarif, Zeiträumen (heute, Woche, Monat…), Bilanz
-3. **Tarifperioden** – YAML-Liste der Tarifabschnitte (Preis, Grundgebühr, Abschlag)
+3. **Setup-Menü (Tarifperioden)** – Hier fügst du über den Button **"+ Neue Tarifperiode anlegen"** bequem über ein Formular (Datum, Preise, Zeiten) deine Tarife hinzu. Danach auf "Speichern & Beenden" klicken.
 
-Einstellungen können nachträglich über **Konfigurieren** geändert werden.
-
-## Tarifperioden (YAML-Format)
-
-```yaml
-- start_date: "2024-01-01"
-  day_price: 0.35           # Tagpreis €/kWh
-  night_price: 0.22         # Nachtpreis €/kWh (optional, Standard = day_price)
-  base_price: 140.0         # Jährliche Grundgebühr in € (optional)
-  advance_payment: 65.0     # Monatlicher Abschlag in € (für Bilanz)
-  night_start: "22:00"      # Beginn der Nachtzeit (optional, Standard: 22:00)
-  night_end: "06:00"        # Ende der Nachtzeit (optional, Standard: 06:00)
-- start_date: "2025-01-01"
-  day_price: 0.38
-  night_price: 0.23
-  base_price: 155.0
-  advance_payment: 70.0
-```
+*(Einstellungen können nachträglich jederzeit über **Konfigurieren** im selben Menü angepasst, bearbeitet oder gelöscht werden.)*
 
 ## Sensor-Entitäten & Dashboard
 
