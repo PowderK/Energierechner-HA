@@ -28,6 +28,8 @@ from .const import (
     CONF_PREVIOUS_DAY,
     CONF_PREVIOUS_WEEK,
     CONF_SOURCE_ENTITY,
+    CONF_SOURCE_UNIT,
+    SOURCE_UNIT_WH,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -112,6 +114,8 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
         self._balance: bool = config.get(CONF_BALANCE, False)
         self._daily_consumption: bool = config.get(CONF_DAILY_CONSUMPTION, False)
         self._nightly_consumption: bool = config.get(CONF_NIGHTLY_CONSUMPTION, False)
+        # Einheiten-Konvertierung: Wh-Sensor → Faktor 0.001 (÷ 1000)
+        self._unit_factor: float = 0.001 if config.get(CONF_SOURCE_UNIT) == SOURCE_UNIT_WH else 1.0
         self._periods: list[dict] = sorted(
             config.get(CONF_PERIODS, []),
             key=lambda p: _parse_date(p["start_date"])
@@ -146,7 +150,7 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
             except (TypeError, ValueError):
                 return 0.0
 
-        total = max(0.0, _val(states[-1]) - _val(states[0]))
+        total = max(0.0, (_val(states[-1]) - _val(states[0])) * self._unit_factor)
 
         if not self._night_rate or not self._periods:
             return {"total": total, "day": total, "night": 0.0}
@@ -159,7 +163,7 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
         for state in states[1:]:
             cur_val = _val(state)
             cur_ts = state.last_updated or state.last_changed
-            delta = cur_val - prev_val
+            delta = (cur_val - prev_val) * self._unit_factor
             if delta > 0 and cur_ts and prev_ts:
                 mid = prev_ts + (cur_ts - prev_ts) / 2
                 tariff = self._tariff_at(mid)

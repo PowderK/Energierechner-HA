@@ -9,7 +9,19 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_SOURCE_UNIT, SOURCE_UNIT_KWH, SOURCE_UNIT_WH
+
+# Wiederverwendbarer Selektor für die Einheitenauswahl
+def _source_unit_selector() -> selector.SelectSelector:
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=SOURCE_UNIT_KWH, label="kWh (Standard)"),
+                selector.SelectOptionDict(value=SOURCE_UNIT_WH,  label="Wh (÷ 1000 automatisch)"),
+            ],
+            mode="dropdown",
+        )
+    )
 
 
 class EnergierechnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -43,6 +55,7 @@ class EnergierechnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     translation_key="meter_type"
                 )
             ),
+            vol.Required(CONF_SOURCE_UNIT, default=SOURCE_UNIT_KWH): _source_unit_selector(),
             vol.Optional("scan_interval", default=600): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=60, max=86400, step=60, mode="box")
             ),
@@ -195,6 +208,8 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
             action = user_input["action"]
             if action == "save":
                 return self.async_create_entry(title="", data=self._data)
+            elif action == "edit_base":
+                return await self.async_step_base_settings()
             elif action == "edit_features":
                 return await self.async_step_features()
             elif action == "add_period":
@@ -205,8 +220,9 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
                 return await self.async_step_edit_period()
 
         options = [
-            selector.SelectOptionDict(value="edit_features", label="🛠️ Funktionen & Zeiträume anpassen"),
-            selector.SelectOptionDict(value="add_period", label="➕ Neue Tarifperiode anlegen"),
+            selector.SelectOptionDict(value="edit_base",     label="⚙️ Grundeinstellungen (Einheit, Intervall)"),
+            selector.SelectOptionDict(value="edit_features", label="🛠️ Funktionen &amp; Zeiträume anpassen"),
+            selector.SelectOptionDict(value="add_period",    label="➕ Neue Tarifperiode anlegen"),
         ]
         
         periods = self._data.get("periods", [])
@@ -225,6 +241,21 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
             )
         })
         return self.async_show_form(step_id="menu", data_schema=schema)
+
+    async def async_step_base_settings(self, user_input=None):
+        """Grundeinstellungen: Einheit des Sensors und Scan-Intervall."""
+        if user_input is not None:
+            self._data.update(user_input)
+            self._data["scan_interval"] = int(user_input.get("scan_interval", 600))
+            return self.async_create_entry(title="", data=self._data)
+
+        schema = vol.Schema({
+            vol.Required(CONF_SOURCE_UNIT, default=self._data.get(CONF_SOURCE_UNIT, SOURCE_UNIT_KWH)): _source_unit_selector(),
+            vol.Optional("scan_interval", default=self._data.get("scan_interval", 600)): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=60, max=86400, step=60, mode="box")
+            ),
+        })
+        return self.async_show_form(step_id="base_settings", data_schema=schema)
 
     async def async_step_features(self, user_input=None):
         if user_input is not None:

@@ -28,3 +28,7 @@ ENERGY_KWH = "kWh"
 CONF_METER_TYPE = "meter_type"
 METER_TYPE_CONSUMPTION = "consumption"  # Kosten/Verbrauch
 METER_TYPE_FEED_IN = "feed_in"          # Ertrag/Einspeisung
+
+CONF_SOURCE_UNIT = "source_unit"
+SOURCE_UNIT_KWH = "kwh"  # Sensor liefert kWh (Standard)
+SOURCE_UNIT_WH  = "wh"   # Sensor liefert Wh → wird durch 1000 geteilt
