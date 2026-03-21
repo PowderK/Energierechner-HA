@@ -76,11 +76,23 @@ cards:
         entity: sensor.energierechner_heute_verbrauch
         name: Verbrauch Heute
       - type: entity
+        entity: sensor.energierechner_gestern_kosten
+        name: Kosten Gestern
+      - type: entity
+        entity: sensor.energierechner_gestern_verbrauch
+        name: Verbrauch Gestern
+      - type: entity
         entity: sensor.energierechner_aktuelle_woche_kosten
         name: Kosten Woche
       - type: entity
         entity: sensor.energierechner_aktuelle_woche_verbrauch
         name: Verbrauch Woche
+      - type: entity
+        entity: sensor.energierechner_vorherige_woche_kosten
+        name: Kosten Letzte Woche
+      - type: entity
+        entity: sensor.energierechner_vorherige_woche_verbrauch
+        name: Verbrauch Letzte Woche
       - type: entity
         entity: sensor.energierechner_aktueller_monat_kosten
         name: Kosten Monat
@@ -88,11 +100,13 @@ cards:
         entity: sensor.energierechner_aktueller_monat_verbrauch
         name: Verbrauch Monat
       - type: entity
-        entity: sensor.energierechner_aktuelles_jahr_kosten
-        name: Kosten Jahr
+        entity: sensor.energierechner_letzter_monat_kosten
+        name: Kosten Letzter Monat
       - type: entity
-        entity: sensor.energierechner_aktuelles_jahr_verbrauch
-        name: Verbrauch Jahr
+        entity: sensor.energierechner_letzter_monat_verbrauch
+        name: Verbrauch Letzter Monat
+
+  # Natives Balkendiagramm (Verlauf der letzten 7 Tage)
   - type: statistics-graph
     title: Verbrauch (Letzte 7 Tage)
     chart_type: bar
@@ -102,20 +116,44 @@ cards:
       - change
     entities:
       - sensor.energierechner_gesamtverbrauch
-  - type: statistics-graph
-    title: Kosten (Letzte 7 Tage)
-    chart_type: bar
-    period: day
-    days_to_show: 7
-    stat_types:
-      - change
-    entities:
-      - sensor.energierechner_gesamtkosten
 ```
 
-> **Tipp zum Diagramm**: Die beiden `statistics-graph` Karten (Balkendiagramme) werten automatisch die Langzeitstatistiken (`state_class: total`) aus. Sie zeigen dir deinen exakten täglichen Verbrauch und die Kosten der letzten 7 Tage als Säulen an. Du kannst `period` auch auf `month` stellen, um die laufenden Monate dieses Jahres miteinander zu vergleichen!
+### Balken-Vergleich der Vorperiode (via Bar Card)
 
-> **Tipp:** Wenn du die [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row) HACS Frontend-Karte verwendest, lassen sich Kosten und Verbrauch noch kompakter in *einer* Zeile kombinieren.
+Wenn du den Verbrauch der aktuellen Periode direkt als **Balkendigramm über der Vorperiode** ("balken darüberlegen") anzeigen möchtest, empfiehlt sich die HACS Frontend-Erweiterung `custom:bar-card`.
+Damit kannst du den aktuellen und vergangenen Zeitraum perfekt optisch vergleichen:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: custom:bar-card
+    title: Tagesvergleich (Verbrauch)
+    entities:
+      - entity: sensor.energierechner_heute_verbrauch
+        name: Heute
+        color: '#3498db'
+      - entity: sensor.energierechner_gestern_verbrauch
+        name: Gestern
+        color: '#95a5a6'
+    direction: right
+    height: 40px
+
+  - type: custom:bar-card
+    title: Monatsvergleich (Verbrauch)
+    entities:
+      - entity: sensor.energierechner_aktueller_monat_verbrauch
+        name: Dieser Monat
+        color: '#e74c3c'
+      - entity: sensor.energierechner_letzter_monat_verbrauch
+        name: Letzter Monat
+        color: '#95a5a6'
+    direction: right
+    height: 40px
+```
+
+> **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
+
+> **Tipp für kompakte Layouts:** Wenn du die [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row) HACS Frontend-Karte verwendest, lassen sich aktuelle Periode und Vorperiode sogar numerisch in *einer einzigen* Zeile kombinieren.
 
 ## Debugging
 
