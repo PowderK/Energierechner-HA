@@ -3,20 +3,27 @@
     "step": {
       "user": {
         "title": "Grundkonfiguration",
+        "description": "Willkommen beim Energierechner! Bitte wähle deinen Quell-Sensor, der den Gesamtverbrauch in kWh ausgibt.",
         "data": {
           "name": "Sensorname",
           "source_entity": "Stromzähler (kWh-Sensor)",
-          "scan_interval": "Aktualisierungsintervall (Sekunden)"
+          "scan_interval": "Aktualisierungsintervall (Sek)"
+        },
+        "data_description": {
+          "name": "Der Basisname für alle erzeugten Entitäten (z. B. 'Strom').",
+          "source_entity": "Wähle den Sensor aus, der den gesamten, fortlaufenden Stromverbrauch in kWh misst.",
+          "scan_interval": "Wie oft sollen Kosten und Verbrauch neu berechnet werden? (Standard: 600 Sekunden = 10 Minuten)"
         }
       },
       "features": {
         "title": "Funktionen auswählen",
+        "description": "Entscheide, welche Auswertungen und Zeiträume der Energierechner für dich berechnen soll. Für jeden aktivierten Zeitraum werden separate Sensoren für Kosten und Verbrauch erzeugt.",
         "data": {
           "night_rate": "Nachttarif verwenden",
           "add_base_price": "Grundpreis einrechnen",
           "daily_consumption": "Tagesverbrauch (Tag) ausgeben",
           "nightly_consumption": "Nachtverbrauch ausgeben",
-          "periods_calculation": "Periodenberechnung aktivieren",
+          "periods_calculation": "Einzelne Tarifperioden auswerten",
           "balance": "Bilanz (Abschlag – Kosten) berechnen",
           "daily": "Heutiger Tag",
           "previous_day": "Gestern",
@@ -26,31 +33,58 @@
           "last_month": "Letzter Monat",
           "current_year": "Aktuelles Jahr",
           "last_year": "Letztes Jahr"
+        },
+        "data_description": {
+          "night_rate": "Trennt den Verbrauch anhand der von dir angegebenen Uhrzeiten in Tag- und Nachtstrom auf.",
+          "add_base_price": "Erhöht die berechneten Kosten anteilig um die jährliche Grundgebühr.",
+          "daily_consumption": "Erzeugt einen eigenen Sensor, der nur den Verbrauch (in kWh) während der Tageszeit anzeigt.",
+          "nightly_consumption": "Erzeugt einen eigenen Sensor, der nur den Verbrauch (in kWh) während der Nachtzeit anzeigt.",
+          "periods_calculation": "Aktiviert die Erstellung von Entitäten, die exakt an den von dir definierten Startdaten einer Tarifperiode beginnen.",
+          "balance": "Wenn aktiv, rechnet der Energierechner für dich aus, ob du (anhand deines monatlichen Abschlags) Guthaben hast oder nachzahlen musst.",
+          "daily": "Berechnet Verbrauch & Kosten ab Mitternacht bis jetzt.",
+          "previous_day": "Verbrauch & Kosten des gestrigen Tages.",
+          "current_week": "Verbrauch & Kosten ab Montag dieser Woche.",
+          "previous_week": "Verbrauch & Kosten der letzten vollständigen Woche.",
+          "current_month": "Verbrauch & Kosten des laufenden Monats.",
+          "last_month": "Verbrauch & Kosten des vergangenen Monats.",
+          "current_year": "Verbrauch & Kosten ab dem 1. Januar des aktuellen Jahres.",
+          "last_year": "Verbrauch & Kosten des kompletten vorherigen Jahres."
         }
       },
       "menu": {
         "title": "Setup-Menü: Optionen & Tarife",
-        "description": "Was möchtest du als nächstes tun?",
+        "description": "Was möchtest du als nächstes tun? Wir benötigen mindestens eine Tarifperiode, um die Kosten berechnen zu können.",
         "data": {
           "action": "Aktion auswählen"
         }
       },
       "edit_period": {
         "title": "Tarifperiode konfigurieren",
+        "description": "Hinterlege hier die Konditionen deines Stromvertrags.",
         "data": {
           "start_date": "Gültig ab (Datum)",
-          "day_price": "Tagpreis (€ pro kWh)",
-          "night_price": "Nachtpreis (€ pro kWh)",
+          "day_price": "Preis pro kWh (€)",
+          "night_price": "Nachtpreis pro kWh (€)",
           "base_price": "Grundpreis (€ pro Jahr)",
           "advance_payment": "Abschlag (€ pro Monat)",
           "night_start": "Nachttarif beginnt um",
           "night_end": "Nachttarif endet um",
           "delete_period": "🗑️ Diese Periode löschen"
+        },
+        "data_description": {
+          "start_date": "Ab wann ist/war dieser Tarif gültig? Im Format JJJJ-MM-TT.",
+          "day_price": "Der normale Strompreis (oder Tagstrompreis) in Euro (z. B. 0.35 für 35 Cent).",
+          "night_price": "Nur wichtig, wenn 'Nachttarif verwenden' aktiv ist. Sonst gleich dem Tagpreis setzen.",
+          "base_price": "Jährliche fixe Grundgebühr deines Versorgers in Euro (z. B. 120.00).",
+          "advance_payment": "Die monatliche Rate, die du an den Versorger zahlst (z. B. 80.00) – nur relevant für die Bilanzierung.",
+          "night_start": "Uhrzeit (z. B. 22:00:00), ab der der Nachttarif gilt.",
+          "night_end": "Uhrzeit (z. B. 06:00:00), bis zu der der Nachttarif gilt.",
+          "delete_period": "Setze einen Haken, um diesen Tarif komplett zu entfernen."
         }
       }
     },
     "error": {
-      "invalid_date": "Ungültiges Datum. Bitte neu eingeben."
+      "invalid_date": "Ungültiges Datum. Das Format muss JJJJ-MM-TT sein."
     },
     "abort": {
       "already_configured": "Diese Integration ist bereits eingerichtet."
@@ -60,19 +94,20 @@
     "step": {
       "menu": {
         "title": "Energierechner Einstellungen",
-        "description": "Was möchtest du bearbeiten?",
+        "description": "Was möchtest du bearbeiten? Wähle eine bestehende Tarifperiode aus der Liste oder passe die allgemeinen Funktionen an.",
         "data": {
           "action": "Aktion auswählen"
         }
       },
       "features": {
         "title": "Funktionen & Zeiträume",
+        "description": "Entscheide, welche Auswertungen und Zeiträume berechnet werden sollen.",
         "data": {
           "night_rate": "Nachttarif verwenden",
           "add_base_price": "Grundpreis einrechnen",
           "daily_consumption": "Tagesverbrauch (Tag) ausgeben",
           "nightly_consumption": "Nachtverbrauch ausgeben",
-          "periods_calculation": "Periodenberechnung aktivieren",
+          "periods_calculation": "Einzelne Tarifperioden auswerten",
           "balance": "Bilanz (Abschlag – Kosten) berechnen",
           "daily": "Heutiger Tag",
           "previous_day": "Gestern",
@@ -82,24 +117,51 @@
           "last_month": "Letzter Monat",
           "current_year": "Aktuelles Jahr",
           "last_year": "Letztes Jahr"
+        },
+        "data_description": {
+          "night_rate": "Trennt den Verbrauch anhand der von dir angegebenen Uhrzeiten in Tag- und Nachtstrom auf.",
+          "add_base_price": "Erhöht die berechneten Kosten anteilig um die jährliche Grundgebühr.",
+          "daily_consumption": "Erzeugt einen eigenen Sensor für kWh während der Tageszeit.",
+          "nightly_consumption": "Erzeugt einen eigenen Sensor für kWh während der Nachtzeit.",
+          "periods_calculation": "Erzeugt Sensoren, die exakt an den Gültigkeitsdaten deiner hinterlegten Tarife starten.",
+          "balance": "Wenn aktiv, rechnet der Energierechner für dich aus, ob du Guthaben hast oder nachzahlen musst.",
+          "daily": "Verbrauch & Kosten ab Mitternacht bis jetzt.",
+          "previous_day": "Verbrauch & Kosten des gestrigen Tages.",
+          "current_week": "Verbrauch & Kosten ab Montag dieser Woche.",
+          "previous_week": "Verbrauch & Kosten der kompletten Vorwoche.",
+          "current_month": "Verbrauch & Kosten des laufenden Monats.",
+          "last_month": "Verbrauch & Kosten des vergangenen Monats.",
+          "current_year": "Verbrauch & Kosten ab dem 1. Januar des aktuellen Jahres.",
+          "last_year": "Verbrauch & Kosten des kompletten vorherigen Jahres."
         }
       },
       "edit_period": {
         "title": "Tarifperiode bearbeiten",
+        "description": "Hinterlege hier die Konditionen deines Stromvertrags.",
         "data": {
           "start_date": "Gültig ab (Datum)",
-          "day_price": "Tagpreis (€ pro kWh)",
-          "night_price": "Nachtpreis (€ pro kWh)",
+          "day_price": "Preis pro kWh (€)",
+          "night_price": "Nachtpreis pro kWh (€)",
           "base_price": "Grundpreis (€ pro Jahr)",
           "advance_payment": "Abschlag (€ pro Monat)",
           "night_start": "Nachttarif beginnt um",
           "night_end": "Nachttarif endet um",
           "delete_period": "🗑️ Diese Periode LÖSCHEN"
+        },
+        "data_description": {
+          "start_date": "Ab wann ist/war dieser Tarif gültig? Im Format JJJJ-MM-TT.",
+          "day_price": "Der normale Strompreis (oder Tagstrompreis) in Euro (z. B. 0.35).",
+          "night_price": "Nur wichtig, wenn 'Nachttarif verwenden' aktiv ist. Sonst gleich dem Tagpreis setzen.",
+          "base_price": "Jährliche fixe Grundgebühr deines Versorgers in Euro (z. B. 120.00).",
+          "advance_payment": "Die monatliche Rate, die du zahlst (z. B. 80.00) – nur relevant für die Bilanz.",
+          "night_start": "Uhrzeit (z. B. 22:00:00), ab der der Nachttarif gilt.",
+          "night_end": "Uhrzeit (z. B. 06:00:00), bis zu der der Nachttarif gilt.",
+          "delete_period": "Setze einen Haken und speichere, um diesen Tarif dauerhaft zu entfernen."
         }
       }
     },
     "error": {
-      "invalid_date": "Ungültiges Datum. Bitte neu eingeben."
+      "invalid_date": "Ungültiges Datum. Das Format muss JJJJ-MM-TT sein."
     }
   }
 }
