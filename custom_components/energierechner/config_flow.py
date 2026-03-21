@@ -1,6 +1,7 @@
 """Config Flow für die Energierechner Integration."""
 from __future__ import annotations
 
+import copy
 import voluptuous as vol
 
 from homeassistant import config_entries
@@ -175,11 +176,12 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         self._entry = config_entry
-        # Erst entry.data laden, dann vorhandene entry.options drüber mergen.
-        # So gehen gespeicherte Optionen beim erneuten Öffnen nicht verloren.
-        self._data: dict = {**config_entry.data}
+        # Tiefe Kopie: entry.data als Basis, vorhandene entry.options drüber mergen.
+        # deepcopy verhindert, dass wir versehentlich config_entry.data mutieren.
+        base = copy.deepcopy(dict(config_entry.data))
         if config_entry.options:
-            self._data.update(config_entry.options)
+            base.update(copy.deepcopy(dict(config_entry.options)))
+        self._data: dict = base
         if "periods" not in self._data:
             self._data["periods"] = []
         self._edit_index: int | None = None
@@ -227,7 +229,8 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_features(self, user_input=None):
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_menu()
+            # Sofort speichern – kein separater "Speichern"-Schritt nötig
+            return self.async_create_entry(title="", data=self._data)
 
         schema = _features_schema(self._data)
         return self.async_show_form(step_id="features", data_schema=schema)
@@ -238,7 +241,8 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
             if user_input.get("delete_period"):
                 if self._edit_index is not None:
                     self._data["periods"].pop(self._edit_index)
-                return await self.async_step_menu()
+                # Sofort speichern nach Löschen
+                return self.async_create_entry(title="", data=self._data)
 
             start_date = user_input["start_date"]
             if not dt_util.parse_date(start_date):
@@ -258,7 +262,9 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
                 else:
                     self._data["periods"].append(period_data)
 
-                return await self.async_step_menu()
+                # Sofort speichern – Änderungen gehen nicht verloren,
+                # wenn User den Dialog per X schließt
+                return self.async_create_entry(title="", data=self._data)
 
         p_def = {}
         if self._edit_index is not None and self._edit_index < len(self._data["periods"]):
