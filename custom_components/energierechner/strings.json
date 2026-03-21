@@ -7,11 +7,13 @@
         "data": {
           "name": "Sensorname",
           "source_entity": "Stromzähler (kWh-Sensor)",
+          "meter_type": "Zählertyp (Bezug oder Einspeisung)",
           "scan_interval": "Aktualisierungsintervall (Sek)"
         },
         "data_description": {
-          "name": "Der Basisname für alle erzeugten Entitäten (z. B. 'Strom').",
-          "source_entity": "Wähle den Sensor aus, der den gesamten, fortlaufenden Stromverbrauch in kWh misst.",
+          "name": "Der Basisname für alle erzeugten Entitäten (z. B. 'Strom' oder 'Einspeisung').",
+          "source_entity": "Wähle den Sensor aus, der den gesamten, fortlaufenden Verbrauch/Ertrag in kWh misst.",
+          "meter_type": "Bestimmt, ob Auswertungen als Kosten (Verbrauch) oder Vergütung (Einspeisung) angezeigt werden.",
           "scan_interval": "Wie oft sollen Kosten und Verbrauch neu berechnet werden? (Standard: 600 Sekunden = 10 Minuten)"
         }
       },

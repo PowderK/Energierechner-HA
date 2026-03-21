@@ -30,6 +30,8 @@ from .const import (
     CONF_PREVIOUS_DAY,
     CONF_PREVIOUS_WEEK,
     CONF_SOURCE_ENTITY,
+    CONF_METER_TYPE,
+    METER_TYPE_FEED_IN,
     DEFAULT_NAME,
     DOMAIN,
 )
@@ -77,11 +79,18 @@ async def async_setup_entry(
 
     entities: list[SensorEntity] = []
 
+    # ---- Metadaten basierend auf Zählertyp ermitteln ----
+    is_feed_in = config.get(CONF_METER_TYPE) == METER_TYPE_FEED_IN
+    
+    lbl_cost = "Ertrag" if is_feed_in else "Kosten"
+    lbl_cons = "Einspeisung" if is_feed_in else "Verbrauch"
+    icon_cons = "mdi:solar-power" if is_feed_in else "mdi:lightning-bolt"
+
     # ---- Gesamt-Sensoren ------------------------------------------------
     entities.append(EnergierechnerSensor(
         coordinator, entry_id, name,
         data_key="total_costs",
-        label="Gesamtkosten",
+        label=f"Gesamt {lbl_cost}",
         unit="€",
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
@@ -90,11 +99,11 @@ async def async_setup_entry(
     entities.append(EnergierechnerSensor(
         coordinator, entry_id, name,
         data_key="total_consumption",
-        label="Gesamtverbrauch",
+        label=f"Gesamt {lbl_cons}",
         unit=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:lightning-bolt",
+        icon=icon_cons,
     ))
 
     # ---- Standard-Zeiträume --------------------------------------------
@@ -105,7 +114,7 @@ async def async_setup_entry(
         entities.append(EnergierechnerSensor(
             coordinator, entry_id, name,
             data_key=f"{key}_costs",
-            label=f"{human} Kosten",
+            label=f"{human} {lbl_cost}",
             unit="€",
             device_class=SensorDeviceClass.MONETARY,
             state_class=SensorStateClass.TOTAL,
@@ -114,17 +123,17 @@ async def async_setup_entry(
         entities.append(EnergierechnerSensor(
             coordinator, entry_id, name,
             data_key=f"{key}_consumption",
-            label=f"{human} Verbrauch",
+            label=f"{human} {lbl_cons}",
             unit=UnitOfEnergy.KILO_WATT_HOUR,
             device_class=SensorDeviceClass.ENERGY,
             state_class=SensorStateClass.TOTAL_INCREASING,
-            icon="mdi:lightning-bolt",
+            icon=icon_cons,
         ))
         if daily_consumption and night_rate:
             entities.append(EnergierechnerSensor(
                 coordinator, entry_id, name,
                 data_key=f"{key}_day_consumption",
-                label=f"{human} Tagverbrauch",
+                label=f"{human} {'Tageinspeisung' if is_feed_in else 'Tagverbrauch'}",
                 unit=UnitOfEnergy.KILO_WATT_HOUR,
                 device_class=SensorDeviceClass.ENERGY,
                 state_class=SensorStateClass.TOTAL_INCREASING,
@@ -134,7 +143,7 @@ async def async_setup_entry(
             entities.append(EnergierechnerSensor(
                 coordinator, entry_id, name,
                 data_key=f"{key}_night_consumption",
-                label=f"{human} Nachtverbrauch",
+                label=f"{human} {'Nachteinspeisung' if is_feed_in else 'Nachtverbrauch'}",
                 unit=UnitOfEnergy.KILO_WATT_HOUR,
                 device_class=SensorDeviceClass.ENERGY,
                 state_class=SensorStateClass.TOTAL_INCREASING,
@@ -155,7 +164,7 @@ async def async_setup_entry(
             entities.append(EnergierechnerSensor(
                 coordinator, entry_id, name,
                 data_key=f"{key}_costs",
-                label=f"{human} Kosten",
+                label=f"{human} {lbl_cost}",
                 unit="€",
                 device_class=SensorDeviceClass.MONETARY,
                 state_class=SensorStateClass.TOTAL,
@@ -164,17 +173,17 @@ async def async_setup_entry(
             entities.append(EnergierechnerSensor(
                 coordinator, entry_id, name,
                 data_key=f"{key}_consumption",
-                label=f"{human} Verbrauch",
+                label=f"{human} {lbl_cons}",
                 unit=UnitOfEnergy.KILO_WATT_HOUR,
                 device_class=SensorDeviceClass.ENERGY,
                 state_class=SensorStateClass.TOTAL_INCREASING,
-                icon="mdi:lightning-bolt",
+                icon=icon_cons,
             ))
             if daily_consumption and night_rate:
                 entities.append(EnergierechnerSensor(
                     coordinator, entry_id, name,
                     data_key=f"{key}_day_consumption",
-                    label=f"{human} Tagverbrauch",
+                    label=f"{human} {'Tageinspeisung' if is_feed_in else 'Tagverbrauch'}",
                     unit=UnitOfEnergy.KILO_WATT_HOUR,
                     device_class=SensorDeviceClass.ENERGY,
                     state_class=SensorStateClass.TOTAL_INCREASING,
@@ -184,7 +193,7 @@ async def async_setup_entry(
                 entities.append(EnergierechnerSensor(
                     coordinator, entry_id, name,
                     data_key=f"{key}_night_consumption",
-                    label=f"{human} Nachtverbrauch",
+                    label=f"{human} {'Nachteinspeisung' if is_feed_in else 'Nachtverbrauch'}",
                     unit=UnitOfEnergy.KILO_WATT_HOUR,
                     device_class=SensorDeviceClass.ENERGY,
                     state_class=SensorStateClass.TOTAL_INCREASING,

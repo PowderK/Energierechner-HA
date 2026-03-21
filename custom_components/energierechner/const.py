@@ -24,3 +24,7 @@ CONF_LAST_YEAR = "last_year"
 DEFAULT_NAME = "Energierechner"
 DEFAULT_SCAN_INTERVAL = 600
 ENERGY_KWH = "kWh"
+
+CONF_METER_TYPE = "meter_type"
+METER_TYPE_CONSUMPTION = "consumption"  # Kosten/Verbrauch
+METER_TYPE_FEED_IN = "feed_in"          # Ertrag/Einspeisung

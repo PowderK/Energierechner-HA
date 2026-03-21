@@ -15,7 +15,8 @@ Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Sc
   - Jährlich (aktuell/letztes)
   - Periodenweise (je Tarif)
 - ✅ Flexibles Verbrauchs-/Kosten-Tracking (Tag/Nacht getrennt)
-- ✅ **Neu:** Jede Kennzahl (Kosten, Verbrauch, Bilanz) wird als **eigene physische Sensor-Entität** erstellt (optimal für Dashboards).
+- ✅ **Neu:** PV-Einspeisung / Ertragstracking: Wähle im Setup zwischen Strombezug (Kosten/Verbrauch) und PV-Einspeisung (Vergütung/Ertrag).
+- ✅ Jede Kennzahl (Kosten, Verbrauch, Bilanz) wird als **eigene physische Sensor-Entität** erstellt (optimal für Dashboards).
 - ✅ Recorder-basierte Verlaufsauswertung
 - ✅ Einrichtung über die **Home Assistant UI** (kein YAML nötig)
 

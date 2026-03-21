@@ -32,6 +32,16 @@ class EnergierechnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("source_entity"): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="sensor")
             ),
+            vol.Required("meter_type", default="consumption"): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[
+                        selector.SelectOptionDict(value="consumption", label="Verbrauch (Strombezug)"),
+                        selector.SelectOptionDict(value="feed_in", label="Einspeisung (PV-Anlage)"),
+                    ],
+                    mode="dropdown",
+                    translation_key="meter_type"
+                )
+            ),
             vol.Optional("scan_interval", default=600): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=60, max=86400, step=60, mode="box")
             ),
