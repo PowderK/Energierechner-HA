@@ -128,12 +128,11 @@ class EnergierechnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 period_data = {
                     "start_date": start_date,
                     "day_price": user_input["day_price"],
-                    "night_price": user_input.get("night_price", user_input["day_price"]),
-                    "base_price": user_input.get("base_price", 0.0),
-                    "advance_payment": user_input.get("advance_payment", 0.0),
-                    "night_start": user_input.get("night_start", "22:00:00"),
-                    "night_end": user_input.get("night_end", "06:00:00"),
                 }
+                for k in ["night_price", "base_price", "advance_payment", "night_start", "night_end"]:
+                    if k in user_input and user_input[k] is not None:
+                        period_data[k] = user_input[k]
+
                 if self._edit_index is not None:
                     self._data["periods"][self._edit_index] = period_data
                 else:
@@ -146,22 +145,25 @@ class EnergierechnerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._edit_index is not None and self._edit_index < len(self._data["periods"]):
             p_def = self._data["periods"][self._edit_index]
 
+        def _s(val):
+            return {"suggested_value": val} if val is not None else {}
+
         schema_dict = {
-            vol.Required("start_date", default=p_def.get("start_date", dt_util.now().strftime("%Y-%m-%d"))): selector.DateSelector(),
-            vol.Required("day_price", default=p_def.get("day_price", 0.30)): selector.NumberSelector(
+            vol.Required("start_date", description=_s(p_def.get("start_date", dt_util.now().strftime("%Y-%m-%d")))): selector.DateSelector(),
+            vol.Required("day_price", description=_s(p_def.get("day_price", 0.30))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=10.0, step=0.001, mode="box")
             ),
-            vol.Optional("night_price", default=p_def.get("night_price", p_def.get("day_price", 0.30))): selector.NumberSelector(
+            vol.Optional("night_price", description=_s(p_def.get("night_price"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=10.0, step=0.001, mode="box")
             ),
-            vol.Optional("base_price", default=p_def.get("base_price", 0.0)): selector.NumberSelector(
+            vol.Optional("base_price", description=_s(p_def.get("base_price"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=5000.0, step=0.01, mode="box")
             ),
-            vol.Optional("advance_payment", default=p_def.get("advance_payment", 0.0)): selector.NumberSelector(
+            vol.Optional("advance_payment", description=_s(p_def.get("advance_payment"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=5000.0, step=0.01, mode="box")
             ),
-            vol.Optional("night_start", default=p_def.get("night_start", "22:00:00")): selector.TimeSelector(),
-            vol.Optional("night_end", default=p_def.get("night_end", "06:00:00")): selector.TimeSelector(),
+            vol.Optional("night_start", description=_s(p_def.get("night_start"))): selector.TimeSelector(),
+            vol.Optional("night_end", description=_s(p_def.get("night_end"))): selector.TimeSelector(),
         }
         
         # Löschen-Checkbox nur beim Bearbeiten anzeigen
@@ -282,12 +284,11 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
                 period_data = {
                     "start_date": start_date,
                     "day_price": user_input["day_price"],
-                    "night_price": user_input.get("night_price", user_input["day_price"]),
-                    "base_price": user_input.get("base_price", 0.0),
-                    "advance_payment": user_input.get("advance_payment", 0.0),
-                    "night_start": user_input.get("night_start", "22:00:00"),
-                    "night_end": user_input.get("night_end", "06:00:00"),
                 }
+                for k in ["night_price", "base_price", "advance_payment", "night_start", "night_end"]:
+                    if k in user_input and user_input[k] is not None:
+                        period_data[k] = user_input[k]
+
                 if self._edit_index is not None:
                     self._data["periods"][self._edit_index] = period_data
                 else:
@@ -301,22 +302,25 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
         if self._edit_index is not None and self._edit_index < len(self._data["periods"]):
             p_def = self._data["periods"][self._edit_index]
 
+        def _s(val):
+            return {"suggested_value": val} if val is not None else {}
+
         schema_dict = {
-            vol.Required("start_date", default=p_def.get("start_date", dt_util.now().strftime("%Y-%m-%d"))): selector.DateSelector(),
-            vol.Required("day_price", default=p_def.get("day_price", 0.30)): selector.NumberSelector(
+            vol.Required("start_date", description=_s(p_def.get("start_date", dt_util.now().strftime("%Y-%m-%d")))): selector.DateSelector(),
+            vol.Required("day_price", description=_s(p_def.get("day_price", 0.30))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=10.0, step=0.001, mode="box")
             ),
-            vol.Optional("night_price", default=p_def.get("night_price", p_def.get("day_price", 0.30))): selector.NumberSelector(
+            vol.Optional("night_price", description=_s(p_def.get("night_price"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=10.0, step=0.001, mode="box")
             ),
-            vol.Optional("base_price", default=p_def.get("base_price", 0.0)): selector.NumberSelector(
+            vol.Optional("base_price", description=_s(p_def.get("base_price"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=5000.0, step=0.01, mode="box")
             ),
-            vol.Optional("advance_payment", default=p_def.get("advance_payment", 0.0)): selector.NumberSelector(
+            vol.Optional("advance_payment", description=_s(p_def.get("advance_payment"))): selector.NumberSelector(
                 selector.NumberSelectorConfig(min=0.0, max=5000.0, step=0.01, mode="box")
             ),
-            vol.Optional("night_start", default=p_def.get("night_start", "22:00:00")): selector.TimeSelector(),
-            vol.Optional("night_end", default=p_def.get("night_end", "06:00:00")): selector.TimeSelector(),
+            vol.Optional("night_start", description=_s(p_def.get("night_start"))): selector.TimeSelector(),
+            vol.Optional("night_end", description=_s(p_def.get("night_end"))): selector.TimeSelector(),
         }
         
         if self._edit_index is not None:
