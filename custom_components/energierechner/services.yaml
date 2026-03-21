@@ -1,0 +1,8 @@
+debug_dump:
+  name: "Energierechner Debug Dump"
+  description: >
+    Schreibt einen detaillierten Debug-Bericht in den Home Assistant Log.
+    Zeigt Recorder-Rohdaten (erste/letzte Zählerstände), berechnete Verbräuche
+    und Tarifperioden. Nützlich zur Diagnose falscher Verbrauchswerte.
+    Den Bericht findet man unter Einstellungen → System → Protokolle.
+  fields: {}
