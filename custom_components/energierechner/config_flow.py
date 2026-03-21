@@ -175,7 +175,11 @@ class EnergierechnerOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         self._entry = config_entry
-        self._data: dict = dict(config_entry.data)
+        # Erst entry.data laden, dann vorhandene entry.options drüber mergen.
+        # So gehen gespeicherte Optionen beim erneuten Öffnen nicht verloren.
+        self._data: dict = {**config_entry.data}
+        if config_entry.options:
+            self._data.update(config_entry.options)
         if "periods" not in self._data:
             self._data["periods"] = []
         self._edit_index: int | None = None
