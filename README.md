@@ -118,63 +118,48 @@ cards:
       - sensor.energierechner_gesamtverbrauch
 ```
 
-### Visualer Tages- und Monatsvergleich (via ApexCharts)
+### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
 
-Da die alte `custom:bar-card` nicht mehr gepflegt wird und häufig nicht mehr verfügbar ist, empfiehlt sich für einen wunderschönen optischen Vergleich die extrem populäre HACS-Erweiterung `custom:apexcharts-card`.
-
-Mit der `offset`-Funktion von ApexCharts kannst du den Verlauf von Gestern präzise direkt über den heutigen Verlauf legen, um zu sehen, ob du heute "besser" oder "schlechter" bist als zum gleichen Zeitpunkt am Vortag:
+Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
+Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen – genau wie bei der alten Bar-Card – einfach nur **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Werte auf exakt einen Datenpunkt am Tag gruppieren:
 
 ```yaml
 type: custom:apexcharts-card
+chart_type: bar
 header:
   show: true
-  title: Verbrauch (Heute vs. Gestern)
+  title: Tagesvergleich (Verbrauch)
   show_states: true
   colorize_states: true
 graph_span: 1d
 span:
-  start: day
+  end: day
+apex_config:
+  xaxis:
+    labels:
+      show: false
+    tooltip:
+      enabled: false
+  tooltip:
+    x:
+      show: false
 series:
   - entity: sensor.energierechner_heute_verbrauch
     name: Heute
-    type: area
     color: '#3498db'
-    opacity: 0.5
-    stroke_width: 2
+    group_by:
+      func: last
+      duration: 1d
   - entity: sensor.energierechner_gestern_verbrauch
     name: Gestern
-    type: line
     color: '#95a5a6'
-    stroke_width: 2
-    offset: '-1d'
+    group_by:
+      func: last
+      duration: 1d
 ```
 
-Ebenso fantastisch funktioniert das Ganze für den aktuellen Monat vs. letzten Monat:
-
-```yaml
-type: custom:apexcharts-card
-header:
-  show: true
-  title: Verbrauch (Monatsvergleich)
-  show_states: true
-  colorize_states: true
-graph_span: 31d
-span:
-  start: month
-series:
-  - entity: sensor.energierechner_aktueller_monat_verbrauch
-    name: Dieser Monat
-    type: area
-    color: '#e74c3c'
-    opacity: 0.5
-    stroke_width: 2
-  - entity: sensor.energierechner_letzter_monat_verbrauch
-    name: Letzter Monat
-    type: line
-    color: '#95a5a6'
-    stroke_width: 2
-    offset: '-1M'
-```
+Dieser YAML-Code komprimiert die Anzeige auf exakt einen Balken pro Entität. Das gleiche Prinzip kannst du verwenden, wenn du "Dieser Monat" vs. "Letzter Monat" vergleichen willst:
+Ersetze dazu einfach die Sensoren in der Liste durch `sensor.energierechner_aktueller_monat_verbrauch` etc. sowie `graph_span: 1d` durch `31d` und `duration: 1d` durch `31d`.
 
 > **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
 
