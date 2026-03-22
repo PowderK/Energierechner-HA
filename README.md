@@ -1,6 +1,17 @@
 # Energierechner Home Assistant Integration
 
+<p align="center">
+  <img src="logo.png" alt="Logo" width="150" />
+</p>
+
 Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Schnittcher/Energierechner) zur Berechnung von Stromkosten mit dynamischen Tarifperioden, Tag-/Nachttarifen und flexibler Aggregation.
+
+## Screenshots
+
+<p align="center">
+  <img src="Werte.png" alt="Werte" width="45%" />
+  <img src="Vergleiche.png" alt="Vergleiche" width="45%" />
+</p>
 
 ## Funktionen
 
