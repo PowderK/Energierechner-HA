@@ -6,7 +6,6 @@ from datetime import datetime, date, time, timedelta
 from typing import Any
 
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -124,16 +123,17 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
     # ------------------------------------------------------------------ Recorder
     async def _get_states(self, start: datetime, end: datetime) -> list:
         try:
-            result: dict = await get_instance(self.hass).async_add_executor_job(
-                state_changes_during_period,
-                self.hass,
-                start,
-                end,
-                self._source,
-                False,   # no_attributes
-                None,    # limit
-                True,    # include_start_time_state
-            )
+            from homeassistant.components.recorder.history import state_changes_during_period
+            def _fetch():
+                return state_changes_during_period(
+                    self.hass,
+                    start,
+                    end,
+                    entity_id=self._source,
+                    no_attributes=True,
+                    include_start_time_state=True
+                )
+            result: dict = await self.hass.async_add_executor_job(_fetch)
             return result.get(self._source, [])
         except Exception as err:
             _LOGGER.warning("Recorder-Fehler: %s", err)
@@ -185,9 +185,38 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
         
         _LOGGER.debug("[%s] LTS lieferte %d gültige Punkte", label, len(valid_points))
 
-        # 2. Fallback auf reguläre History (states), falls LTS nicht verfügbar oder leer
+        # 1.5. Kombinieren: Kurzzeit-History für die jüngste Lücke (vom letzten LTS Punkt bis "end")
+        if len(valid_points) > 0:
+            last_lts_ts = valid_points[-1]["ts"]
+            if last_lts_ts < end - timedelta(minutes=5):
+                _LOGGER.debug("[%s] Kombiniere LTS (bis %s) mit Kurzzeit-History", label, last_lts_ts)
+                states = await self._get_states(last_lts_ts, end)
+                if states:
+                    try:
+                        first_history_val = float(states[0].state)
+                        last_lts_val = valid_points[-1]["val"]
+                        
+                        for s in states[1:]:
+                            try:
+                                ts = s.last_updated or s.last_changed
+                                h_val = float(s.state)
+                                delta = h_val - first_history_val
+                                if delta < 0:
+                                    delta = h_val  # Reset Handling
+                                
+                                new_val = last_lts_val + delta
+                                valid_points.append({"ts": dt_util.as_local(ts), "val": new_val})
+                                
+                                first_history_val = h_val
+                                last_lts_val = new_val
+                            except (TypeError, ValueError):
+                                pass
+                    except (TypeError, ValueError, IndexError):
+                        pass
+
+        # 2. Fallback auf reguläre History (states), falls LTS leer (oder nur 1 Punkt bei Neuinstallation)
         if len(valid_points) < 2:
-            _LOGGER.debug("[%s] Zu wenige LTS-Punkte. Fallback auf Kurzzeit-History...", label)
+            _LOGGER.debug("[%s] Zu wenige LTS-Punkte. Hole komplette Kurzzeit-History...", label)
             states = await self._get_states(start, end)
             valid_points = []
             for s in states:
@@ -208,24 +237,9 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
                 "last_ts": end
             }
 
-        first_val = valid_points[0]["val"]
-        last_val = valid_points[-1]["val"]
-        total = max(0.0, (last_val - first_val) * self._unit_factor)
-        
-        _LOGGER.debug("[%s] Erster Wert: %f (%s), Letzter Wert: %f (%s) -> Diff: %f", 
-                      label, first_val, valid_points[0]["ts"], last_val, valid_points[-1]["ts"], total)
-
-        if not self._night_rate or not self._periods:
-            return {
-                "total": total, 
-                "day": total, 
-                "night": 0.0, 
-                "first_ts": valid_points[0]["ts"], 
-                "last_ts": valid_points[-1]["ts"]
-            }
-
         day_kwh = 0.0
         night_kwh = 0.0
+        total_kwh = 0.0
         prev_val = valid_points[0]["val"]
         prev_ts = valid_points[0]["ts"]
 
@@ -234,22 +248,27 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
             cur_ts = pt["ts"]
             delta = (cur_val - prev_val) * self._unit_factor
             if delta > 0:
-                mid = prev_ts + (cur_ts - prev_ts) / 2
-                tariff = self._tariff_at(mid)
-                ns = _time_from_str(tariff.get("night_start", "22:00")) if tariff else time(22, 0)
-                ne = _time_from_str(tariff.get("night_end", "06:00")) if tariff else time(6, 0)
-                
-                if _is_night(mid, ns, ne):
-                    night_kwh += delta
-                else:
-                    day_kwh += delta
+                total_kwh += delta
+                if self._night_rate and self._periods:
+                    mid = prev_ts + (cur_ts - prev_ts) / 2
+                    tariff = self._tariff_at(mid)
+                    ns = _time_from_str(tariff.get("night_start", "22:00")) if tariff else time(22, 0)
+                    ne = _time_from_str(tariff.get("night_end", "06:00")) if tariff else time(6, 0)
+                    
+                    if _is_night(mid, ns, ne):
+                        night_kwh += delta
+                    else:
+                        day_kwh += delta
             prev_val = cur_val
             prev_ts = cur_ts
 
-        _LOGGER.debug("[%s] Tag kWh: %f, Nacht kWh: %f, Total(Berechnet): %f", 
-                      label, day_kwh, night_kwh, total)
+        if not self._night_rate or not self._periods:
+            day_kwh = total_kwh
+
+        _LOGGER.debug("[%s] Tag kWh: %f, Nacht kWh: %f, Total: %f", 
+                      label, day_kwh, night_kwh, total_kwh)
         return {
-            "total": round(total, 3), 
+            "total": round(total_kwh, 3), 
             "day": round(day_kwh, 3), 
             "night": round(night_kwh, 3),
             "first_ts": valid_points[0]["ts"],
