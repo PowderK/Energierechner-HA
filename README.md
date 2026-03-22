@@ -121,7 +121,7 @@ cards:
 ### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
 
 Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
-Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen einfach **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Werte auf exakt einen Datenpunkt am Tag gruppieren.
+Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen einfach **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Darstellung über einen einfachen JavaScript-Zweizeiler erzwingen, sodass die Karte exakt nur einen dicken Balken pro Entität generiert und nichts abschneidet.
 
 Hier ist ein komplettes YAML-Setup als Dashboard-Zwei-Spalten-Grid (Links: **Verbrauch**, Rechts: **Kosten**):
 
@@ -138,20 +138,23 @@ cards:
     graph_span: 1d
     span:
       end: day
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_heute_verbrauch
         name: Heute
         type: column
         color: '#3498db'
-        group_by: { func: last, duration: 1d }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_gestern_verbrauch
         name: Gestern
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1d }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 
   - type: custom:apexcharts-card
     header:
@@ -162,20 +165,23 @@ cards:
     graph_span: 1d
     span:
       end: day
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_heute_kosten
         name: Heute
         type: column
         color: '#f1c40f'
-        group_by: { func: last, duration: 1d }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_gestern_kosten
         name: Gestern
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1d }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 ```
 
 ### Wochenvergleich (Verbrauch & Kosten getrennt)
@@ -194,20 +200,23 @@ cards:
     graph_span: 1w
     span:
       end: isoWeek
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_aktuelle_woche_verbrauch
         name: Diese Woche
         type: column
         color: '#3498db'
-        group_by: { func: last, duration: 1w }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_vorherige_woche_verbrauch
         name: Letzte Woche
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1w }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 
   - type: custom:apexcharts-card
     header:
@@ -218,20 +227,23 @@ cards:
     graph_span: 1w
     span:
       end: isoWeek
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_aktuelle_woche_kosten
         name: Diese Woche
         type: column
         color: '#f1c40f'
-        group_by: { func: last, duration: 1w }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_vorherige_woche_kosten
         name: Letzte Woche
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1w }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 ```
 
 ### Jahresvergleich (Verbrauch & Kosten getrennt)
@@ -250,20 +262,23 @@ cards:
     graph_span: 1y
     span:
       end: year
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_aktuelles_jahr_verbrauch
         name: Dieses Jahr
         type: column
         color: '#e74c3c'
-        group_by: { func: last, duration: 1y }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_letztes_jahr_verbrauch
         name: Letztes Jahr
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1y }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 
   - type: custom:apexcharts-card
     header:
@@ -274,20 +289,23 @@ cards:
     graph_span: 1y
     span:
       end: year
+    update_interval: 5m
     apex_config:
-      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
       - entity: sensor.energierechner_aktuelles_jahr_kosten
         name: Dieses Jahr
         type: column
         color: '#f1c40f'
-        group_by: { func: last, duration: 1y }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
       - entity: sensor.energierechner_letztes_jahr_kosten
         name: Letztes Jahr
         type: column
         color: '#95a5a6'
-        group_by: { func: last, duration: 1y }
+        data_generator: |
+          return [[new Date().getTime(), entity.state]];
 ```
 
 > **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
