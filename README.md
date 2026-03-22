@@ -173,7 +173,7 @@ series:
     type: line
     color: '#95a5a6'
     stroke_width: 2
-    offset: '-1mon'
+    offset: '-1M'
 ```
 
 > **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
