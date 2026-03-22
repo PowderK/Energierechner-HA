@@ -54,10 +54,53 @@ Die Integration erzeugt für jeden aktivierten Zeitraum separate Sensoren für *
 
 *(Beispiel: Wenn der Name in der UI "Strom" lautet, heißen die Entitäten `sensor.strom_heute_kosten` und `sensor.strom_heute_verbrauch`).*
 
-### Beispiel-Karte fürs Dashboard (Grid / Übersicht)
+### Beispiel-Karten fürs Dashboard (Grid / Übersicht)
 
-Hier ist ein vorgefertigter YAML-Code für eine schöne Übersicht im HA-Dashboard. Kopiere diesen Code als "Manuelle Karte" (Manual Card) in dein Dashboard (ersetze ggf. `energierechner` durch deinen gewählten Sensornamen):
+Hier sind zwei vorgefertigte YAML-Codes für eine schöne, getrennte Übersicht im HA-Dashboard (ersetze ggf. `energierechner` durch deinen gewählten Sensornamen). Die aktuelle Periode und die Vorperiode stehen hierbei für den direkten Vergleich (Heute vs Gestern) sofort lesbar nebeneinander.
 
+**Kachel 1: Übersicht Verbrauch**
+```yaml
+type: vertical-stack
+cards:
+  - type: entity
+    entity: sensor.energierechner_gesamtverbrauch
+    name: Gesamtverbrauch
+    icon: mdi:lightning-bolt
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: entity
+        entity: sensor.energierechner_heute_verbrauch
+        name: Verbrauch Heute
+      - type: entity
+        entity: sensor.energierechner_gestern_verbrauch
+        name: Verbrauch Gestern
+      - type: entity
+        entity: sensor.energierechner_aktuelle_woche_verbrauch
+        name: Verbrauch Diese Woche
+      - type: entity
+        entity: sensor.energierechner_vorherige_woche_verbrauch
+        name: Verbrauch Letzte Woche
+      - type: entity
+        entity: sensor.energierechner_aktueller_monat_verbrauch
+        name: Verbrauch Dieser Monat
+      - type: entity
+        entity: sensor.energierechner_letzter_monat_verbrauch
+        name: Verbrauch Letzter Monat
+  # Natives Balkendiagramm (Verlauf der letzten 7 Tage)
+  - type: statistics-graph
+    title: Verbrauch (Letzte 7 Tage)
+    chart_type: bar
+    period: day
+    days_to_show: 7
+    stat_types:
+      - change
+    entities:
+      - sensor.energierechner_gesamtverbrauch
+```
+
+**Kachel 2: Übersicht Kosten**
 ```yaml
 type: vertical-stack
 cards:
@@ -73,49 +116,20 @@ cards:
         entity: sensor.energierechner_heute_kosten
         name: Kosten Heute
       - type: entity
-        entity: sensor.energierechner_heute_verbrauch
-        name: Verbrauch Heute
-      - type: entity
         entity: sensor.energierechner_gestern_kosten
         name: Kosten Gestern
       - type: entity
-        entity: sensor.energierechner_gestern_verbrauch
-        name: Verbrauch Gestern
-      - type: entity
         entity: sensor.energierechner_aktuelle_woche_kosten
-        name: Kosten Woche
-      - type: entity
-        entity: sensor.energierechner_aktuelle_woche_verbrauch
-        name: Verbrauch Woche
+        name: Kosten Diese Woche
       - type: entity
         entity: sensor.energierechner_vorherige_woche_kosten
         name: Kosten Letzte Woche
       - type: entity
-        entity: sensor.energierechner_vorherige_woche_verbrauch
-        name: Verbrauch Letzte Woche
-      - type: entity
         entity: sensor.energierechner_aktueller_monat_kosten
-        name: Kosten Monat
-      - type: entity
-        entity: sensor.energierechner_aktueller_monat_verbrauch
-        name: Verbrauch Monat
+        name: Kosten Dieser Monat
       - type: entity
         entity: sensor.energierechner_letzter_monat_kosten
         name: Kosten Letzter Monat
-      - type: entity
-        entity: sensor.energierechner_letzter_monat_verbrauch
-        name: Verbrauch Letzter Monat
-
-  # Natives Balkendiagramm (Verlauf der letzten 7 Tage)
-  - type: statistics-graph
-    title: Verbrauch (Letzte 7 Tage)
-    chart_type: bar
-    period: day
-    days_to_show: 7
-    stat_types:
-      - change
-    entities:
-      - sensor.energierechner_gesamtverbrauch
 ```
 
 ### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
@@ -127,7 +141,7 @@ Hier ist ein komplettes YAML-Setup als Dashboard-Zwei-Spalten-Grid (Links: **Ver
 
 ```yaml
 type: grid
-columns: 2
+columns: 1
 cards:
   - type: custom:apexcharts-card
     header:
@@ -193,7 +207,7 @@ Für den perfekten **Wochenvergleich** (Aktuelle Woche vs. Vorherige Woche):
 
 ```yaml
 type: grid
-columns: 2
+columns: 1
 cards:
   - type: custom:apexcharts-card
     header:
@@ -259,7 +273,7 @@ Und hier der Code für den **Jahresvergleich** (Aktuelles Jahr vs. Letztes Jahr)
 
 ```yaml
 type: grid
-columns: 2
+columns: 1
 cards:
   - type: custom:apexcharts-card
     header:
