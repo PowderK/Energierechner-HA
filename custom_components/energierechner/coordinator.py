@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.history import state_changes_during_period
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -139,36 +139,106 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
             _LOGGER.warning("Recorder-Fehler: %s", err)
             return []
 
-    async def _consumption_split(self, start: datetime, end: datetime) -> dict[str, float]:
-        states = await self._get_states(start, end)
-        if len(states) < 2:
-            return {"total": 0.0, "day": 0.0, "night": 0.0}
+    async def _consumption_split(self, start: datetime, end: datetime, label: str = "") -> dict[str, float]:
+        from homeassistant.components.recorder.statistics import statistics_during_period
+        
+        # 1. Zuerst Langzeit-Archiv (Long-Term Statistics) probieren (mit 1h Puffer davor)
+        try:
+            stat_res = await get_instance(self.hass).async_add_executor_job(
+                statistics_during_period,
+                self.hass,
+                start - timedelta(hours=1),
+                end,
+                {self._source},
+                "hour",
+                None,
+                {"sum", "state"}
+            )
+            raw_stats = stat_res.get(self._source, [])
+        except Exception as err:
+            _LOGGER.warning("[%s] Fehler beim LTS-Abruf: %s", label, err)
+            raw_stats = []
 
-        def _val(s) -> float:
+        valid_points = []
+        for s in raw_stats:
             try:
-                return float(s.state)
+                # "sum" bevorzugen, da es bei Resets automatisch korrigiert wird
+                raw_val = s.get("sum") if s.get("sum") is not None else s.get("state")
+                if raw_val is None:
+                    continue
+                val = float(raw_val)
+                
+                ts_raw = s.get("start")
+                if isinstance(ts_raw, (int, float)):
+                    if ts_raw > 1e11:  # Millisekunden
+                        ts = dt_util.utc_from_timestamp(ts_raw / 1000)
+                    else:
+                        ts = dt_util.utc_from_timestamp(ts_raw)
+                else:
+                    ts = ts_raw
+                if not getattr(ts, "tzinfo", None):
+                    ts = ts.replace(tzinfo=dt_util.UTC)
+                
+                valid_points.append({"ts": dt_util.as_local(ts), "val": val})
             except (TypeError, ValueError):
-                return 0.0
+                pass
+        
+        _LOGGER.debug("[%s] LTS lieferte %d gültige Punkte", label, len(valid_points))
 
-        total = max(0.0, (_val(states[-1]) - _val(states[0])) * self._unit_factor)
+        # 2. Fallback auf reguläre History (states), falls LTS nicht verfügbar oder leer
+        if len(valid_points) < 2:
+            _LOGGER.debug("[%s] Zu wenige LTS-Punkte. Fallback auf Kurzzeit-History...", label)
+            states = await self._get_states(start, end)
+            valid_points = []
+            for s in states:
+                try:
+                    ts = s.last_updated or s.last_changed
+                    valid_points.append({"ts": dt_util.as_local(ts), "val": float(s.state)})
+                except (TypeError, ValueError):
+                    pass
+            _LOGGER.debug("[%s] History lieferte %d gültige Punkte", label, len(valid_points))
+
+        if len(valid_points) < 2:
+            _LOGGER.debug("[%s] Abbruch - Zeitraum liefert insg. nur %d Punkte", label, len(valid_points))
+            return {
+                "total": 0.0, 
+                "day": 0.0, 
+                "night": 0.0, 
+                "first_ts": start, 
+                "last_ts": end
+            }
+
+        first_val = valid_points[0]["val"]
+        last_val = valid_points[-1]["val"]
+        total = max(0.0, (last_val - first_val) * self._unit_factor)
+        
+        _LOGGER.debug("[%s] Erster Wert: %f (%s), Letzter Wert: %f (%s) -> Diff: %f", 
+                      label, first_val, valid_points[0]["ts"], last_val, valid_points[-1]["ts"], total)
 
         if not self._night_rate or not self._periods:
-            return {"total": total, "day": total, "night": 0.0}
+            return {
+                "total": total, 
+                "day": total, 
+                "night": 0.0, 
+                "first_ts": valid_points[0]["ts"], 
+                "last_ts": valid_points[-1]["ts"]
+            }
 
         day_kwh = 0.0
         night_kwh = 0.0
-        prev_val = _val(states[0])
-        prev_ts = states[0].last_updated or states[0].last_changed
+        prev_val = valid_points[0]["val"]
+        prev_ts = valid_points[0]["ts"]
 
-        for state in states[1:]:
-            cur_val = _val(state)
-            cur_ts = state.last_updated or state.last_changed
+        for pt in valid_points[1:]:
+            cur_val = pt["val"]
+            cur_ts = pt["ts"]
             delta = (cur_val - prev_val) * self._unit_factor
-            if delta > 0 and cur_ts and prev_ts:
+            if delta > 0:
                 mid = prev_ts + (cur_ts - prev_ts) / 2
                 tariff = self._tariff_at(mid)
                 ns = _time_from_str(tariff.get("night_start", "22:00")) if tariff else time(22, 0)
                 ne = _time_from_str(tariff.get("night_end", "06:00")) if tariff else time(6, 0)
+                
                 if _is_night(mid, ns, ne):
                     night_kwh += delta
                 else:
@@ -176,7 +246,15 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
             prev_val = cur_val
             prev_ts = cur_ts
 
-        return {"total": round(total, 3), "day": round(day_kwh, 3), "night": round(night_kwh, 3)}
+        _LOGGER.debug("[%s] Tag kWh: %f, Nacht kWh: %f, Total(Berechnet): %f", 
+                      label, day_kwh, night_kwh, total)
+        return {
+            "total": round(total, 3), 
+            "day": round(day_kwh, 3), 
+            "night": round(night_kwh, 3),
+            "first_ts": valid_points[0]["ts"],
+            "last_ts": valid_points[-1]["ts"]
+        }
 
     def _tariff_at(self, ts: datetime) -> dict | None:
         if not self._periods:
@@ -225,10 +303,15 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
             if not cfg.get(flag):
                 continue
             start, end = _get_period_bounds(keyword)
-            split = await self._consumption_split(start, end)
+            _LOGGER.debug("=== Starte Berechnung für %s (%s bis %s) ===", label, start, end)
+            
+            split = await self._consumption_split(start, end, label=label)
             tariff = self._tariff_at(start)
+            _LOGGER.debug("[%s] Tarif genutzt: %s", label, tariff)
+            
             days = (end.date() - start.date()).days + 1
             cost = self._costs(split, tariff, days)
+            _LOGGER.debug("[%s] Kosten kalkuliert: %f (Tage berechnet: %d)", label, cost, days)
 
             data[f"{label}_consumption"] = split["total"]
             data[f"{label}_costs"] = cost
@@ -236,16 +319,51 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
                 data[f"{label}_day_consumption"] = split["day"]
             if self._nightly_consumption:
                 data[f"{label}_night_consumption"] = split["night"]
-            total_costs += cost
-            total_kwh += split["total"]
 
-        # ---- Periodenberechnung -----------------------------------------
+        # ---- Periodenberechnung & Globales Total ------------------------
+        # Globales Total basiert auf der kompletten Langzeithistorie, um nichts
+        # zu verlieren, falls der erste Tarif erst spät startet.
         if cfg.get(CONF_PERIODS_CALCULATION) and self._periods:
+            lifetime_start = dt_util.utc_from_timestamp(0).replace(tzinfo=dt_util.UTC)
+            
+            # 1. Daten VOR der allerersten Periode (falls der Zähler schon länger existiert)
+            first_begin = _parse_date(self._periods[0]["start_date"])
+            tz = dt_util.now().tzinfo
+            first_p_start = datetime.combine(first_begin, time.min).replace(tzinfo=tz)
+            
+            if first_p_start > lifetime_start:
+                _LOGGER.debug(
+                    "=== Starte Berechnung für Vor-Perioden (EPOCH bis %s) ===", 
+                    first_p_start
+                )
+                pre_split = await self._consumption_split(
+                    lifetime_start, 
+                    first_p_start - timedelta(seconds=1), 
+                    label="pre_lifetime"
+                )
+                
+                if pre_split["total"] > 0:
+                    pre_tariff = {**self._periods[0]}
+                    if not pre_tariff.get("night_price"):
+                        pre_tariff["night_price"] = pre_tariff["day_price"]
+                    
+                    real_start = pre_split.get("first_ts", lifetime_start).date()
+                    real_end = pre_split.get("last_ts", first_p_start).date()
+                    days = max(1, (real_end - real_start).days + 1)
+                    
+                    pre_cost = self._costs(pre_split, pre_tariff, days)
+                    total_costs += pre_cost
+                    total_kwh += pre_split["total"]
+                    _LOGGER.debug(
+                        "[pre_lifetime] Verbrauch: %f kWh, Kosten: %f € (Tage berechnet: %d)", 
+                        pre_split["total"], pre_cost, days
+                    )
+
+            # 2. Reguläre Perioden-Schleife
             for i, period in enumerate(self._periods):
                 begin = _parse_date(period["start_date"])
                 if not begin:
                     continue
-                tz = dt_util.now().tzinfo
                 p_start = datetime.combine(begin, time.min).replace(tzinfo=tz)
                 if i + 1 < len(self._periods):
                     next_begin = _parse_date(self._periods[i + 1]["start_date"])
@@ -253,12 +371,24 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
                 else:
                     p_end = dt_util.now()
 
-                split = await self._consumption_split(p_start, p_end)
+                _LOGGER.debug("=== Starte Berechnung für Tarifperiode ab %s (%s bis %s) ===", begin.isoformat(), p_start, p_end)
+                split = await self._consumption_split(p_start, p_end, label=f"period_{begin.isoformat()}")
+                
                 tariff = {**period}
                 if not tariff.get("night_price"):
                     tariff["night_price"] = tariff["day_price"]
-                days = (p_end.date() - p_start.date()).days + 1
+                
+                # Exakte Tage aus dem tatsächlich ermittelten Datensatz oder Zeitraum
+                real_start = split.get("first_ts", p_start).date()
+                real_end = split.get("last_ts", p_end).date()
+                days = max(1, (real_end - real_start).days + 1)
+                
+                _LOGGER.debug("[period_%s] Tarif genutzt: %s", begin.isoformat(), tariff)
                 cost = self._costs(split, tariff, days)
+                _LOGGER.debug(
+                    "[period_%s] Kosten kalkuliert: %f (Tage berechnet: %d)", 
+                    begin.isoformat(), cost, days
+                )
 
                 key = f"period_{begin.isoformat()}"
                 data[f"{key}_consumption"] = split["total"]
@@ -271,10 +401,33 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
                     months = (p_end.date() - p_start.date()).days / 30.44
                     advance = float(period.get("advance_payment", 0.0)) * months
                     data[f"{key}_balance"] = round(advance - cost, 2)
+                    
                 total_costs += cost
                 total_kwh += split["total"]
+                
+        else:
+            # Gar keine Perioden konfiguriert -> Wir holen 
+            # die absolute Lifetime als Total.
+            _LOGGER.debug("Keine Perioden -> hole gesamte Langzeithistorie")
+            lifetime_start = dt_util.utc_from_timestamp(0).replace(
+                tzinfo=dt_util.now().tzinfo
+            )
+            lifetime_end = dt_util.now()
+            split = await self._consumption_split(
+                lifetime_start, 
+                lifetime_end, 
+                label="lifetime_fallback"
+            )
+            total_kwh += split["total"]
+            # Kosten lassen sich ohne Tarif nicht ermitteln, bleiben folglich 0.
 
         data["total_costs"] = round(total_costs, 2)
         data["total_consumption"] = round(total_kwh, 3)
-        _LOGGER.debug("Energierechner Update: %.2f €, %.3f kWh", total_costs, total_kwh)
+        
+        _LOGGER.debug(
+            "Energierechner Update abgeschlossen: %.2f €, %.3f kWh", 
+            total_costs, 
+            total_kwh
+        )
+        _LOGGER.debug("Gesammelte Daten für Sensoren: %s", data)
         return data

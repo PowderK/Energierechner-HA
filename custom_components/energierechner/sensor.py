@@ -241,6 +241,7 @@ class EnergierechnerSensor(CoordinatorEntity, SensorEntity):
         self._entry_id = entry_id
 
         self._attr_name = label
+        # unique_id stabil: entry_id + data_key (unabhängig vom Sensor-Namen)
         self._attr_unique_id = f"{entry_id}_{data_key}"
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
