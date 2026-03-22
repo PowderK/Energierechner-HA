@@ -121,120 +121,173 @@ cards:
 ### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
 
 Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
-Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen – genau wie bei der alten Bar-Card – einfach nur **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Werte auf exakt einen Datenpunkt am Tag gruppieren:
+Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen einfach **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Werte auf exakt einen Datenpunkt am Tag gruppieren.
+
+Hier ist ein komplettes YAML-Setup als Dashboard-Zwei-Spalten-Grid (Links: **Verbrauch**, Rechts: **Kosten**):
 
 ```yaml
-type: custom:apexcharts-card
-header:
-  show: true
-  title: Tagesvergleich (Verbrauch)
-  show_states: true
-  colorize_states: true
-graph_span: 1d
-span:
-  end: day
-apex_config:
-  xaxis:
-    labels:
-      show: false
-    tooltip:
-      enabled: false
-  tooltip:
-    x:
-      show: false
-series:
-  - entity: sensor.energierechner_heute_verbrauch
-    name: Heute
-    type: column
-    color: '#3498db'
-    group_by:
-      func: last
-      duration: 1d
-  - entity: sensor.energierechner_gestern_verbrauch
-    name: Gestern
-    type: column
-    color: '#95a5a6'
-    group_by:
-      func: last
-      duration: 1d
+type: grid
+columns: 2
+cards:
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Tagesvergleich (Verbrauch)
+      show_states: true
+      colorize_states: true
+    graph_span: 1d
+    span:
+      end: day
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_heute_verbrauch
+        name: Heute
+        type: column
+        color: '#3498db'
+        group_by: { func: last, duration: 1d }
+      - entity: sensor.energierechner_gestern_verbrauch
+        name: Gestern
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1d }
+
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Tagesvergleich (Kosten)
+      show_states: true
+      colorize_states: true
+    graph_span: 1d
+    span:
+      end: day
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_heute_kosten
+        name: Heute
+        type: column
+        color: '#f1c40f'
+        group_by: { func: last, duration: 1d }
+      - entity: sensor.energierechner_gestern_kosten
+        name: Gestern
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1d }
 ```
 
-### Wochenvergleich
+### Wochenvergleich (Verbrauch & Kosten getrennt)
 Für den perfekten **Wochenvergleich** (Aktuelle Woche vs. Vorherige Woche):
 
 ```yaml
-type: custom:apexcharts-card
-header:
-  show: true
-  title: Wochenvergleich (Verbrauch)
-  show_states: true
-  colorize_states: true
-graph_span: 1w
-span:
-  end: isoWeek
-apex_config:
-  xaxis:
-    labels:
-      show: false
-    tooltip:
-      enabled: false
-  tooltip:
-    x:
-      show: false
-series:
-  - entity: sensor.energierechner_aktuelle_woche_verbrauch
-    name: Diese Woche
-    type: column
-    color: '#3498db'
-    group_by:
-      func: last
-      duration: 1w
-  - entity: sensor.energierechner_vorherige_woche_verbrauch
-    name: Letzte Woche
-    type: column
-    color: '#95a5a6'
-    group_by:
-      func: last
-      duration: 1w
+type: grid
+columns: 2
+cards:
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Wochenvergleich (Verbrauch)
+      show_states: true
+      colorize_states: true
+    graph_span: 1w
+    span:
+      end: isoWeek
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_aktuelle_woche_verbrauch
+        name: Diese Woche
+        type: column
+        color: '#3498db'
+        group_by: { func: last, duration: 1w }
+      - entity: sensor.energierechner_vorherige_woche_verbrauch
+        name: Letzte Woche
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1w }
+
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Wochenvergleich (Kosten)
+      show_states: true
+      colorize_states: true
+    graph_span: 1w
+    span:
+      end: isoWeek
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_aktuelle_woche_kosten
+        name: Diese Woche
+        type: column
+        color: '#f1c40f'
+        group_by: { func: last, duration: 1w }
+      - entity: sensor.energierechner_vorherige_woche_kosten
+        name: Letzte Woche
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1w }
 ```
 
-### Jahresvergleich
+### Jahresvergleich (Verbrauch & Kosten getrennt)
 Und hier der Code für den **Jahresvergleich** (Aktuelles Jahr vs. Letztes Jahr):
 
 ```yaml
-type: custom:apexcharts-card
-header:
-  show: true
-  title: Jahresvergleich (Verbrauch)
-  show_states: true
-  colorize_states: true
-graph_span: 1y
-span:
-  end: year
-apex_config:
-  xaxis:
-    labels:
-      show: false
-    tooltip:
-      enabled: false
-  tooltip:
-    x:
-      show: false
-series:
-  - entity: sensor.energierechner_aktuelles_jahr_verbrauch
-    name: Dieses Jahr
-    type: column
-    color: '#e74c3c'
-    group_by:
-      func: last
-      duration: 1y
-  - entity: sensor.energierechner_letztes_jahr_verbrauch
-    name: Letztes Jahr
-    type: column
-    color: '#95a5a6'
-    group_by:
-      func: last
-      duration: 1y
+type: grid
+columns: 2
+cards:
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Jahresvergleich (Verbrauch)
+      show_states: true
+      colorize_states: true
+    graph_span: 1y
+    span:
+      end: year
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_aktuelles_jahr_verbrauch
+        name: Dieses Jahr
+        type: column
+        color: '#e74c3c'
+        group_by: { func: last, duration: 1y }
+      - entity: sensor.energierechner_letztes_jahr_verbrauch
+        name: Letztes Jahr
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1y }
+
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Jahresvergleich (Kosten)
+      show_states: true
+      colorize_states: true
+    graph_span: 1y
+    span:
+      end: year
+    apex_config:
+      xaxis: { labels: { show: false }, tooltip: { enabled: false } }
+      tooltip: { x: { show: false } }
+    series:
+      - entity: sensor.energierechner_aktuelles_jahr_kosten
+        name: Dieses Jahr
+        type: column
+        color: '#f1c40f'
+        group_by: { func: last, duration: 1y }
+      - entity: sensor.energierechner_letztes_jahr_kosten
+        name: Letztes Jahr
+        type: column
+        color: '#95a5a6'
+        group_by: { func: last, duration: 1y }
 ```
 
 > **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
