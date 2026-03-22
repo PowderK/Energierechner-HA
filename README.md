@@ -159,8 +159,83 @@ series:
       duration: 1d
 ```
 
-Dieser YAML-Code komprimiert die Anzeige auf exakt einen Balken pro Entität. Das gleiche Prinzip kannst du verwenden, wenn du "Dieser Monat" vs. "Letzter Monat" vergleichen willst:
-Ersetze dazu einfach die Sensoren in der Liste durch `sensor.energierechner_aktueller_monat_verbrauch` etc. sowie `graph_span: 1d` durch `31d` und `duration: 1d` durch `31d`.
+### Wochenvergleich
+Für den perfekten **Wochenvergleich** (Aktuelle Woche vs. Vorherige Woche):
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Wochenvergleich (Verbrauch)
+  show_states: true
+  colorize_states: true
+graph_span: 1w
+span:
+  end: isoWeek
+apex_config:
+  xaxis:
+    labels:
+      show: false
+    tooltip:
+      enabled: false
+  tooltip:
+    x:
+      show: false
+series:
+  - entity: sensor.energierechner_aktuelle_woche_verbrauch
+    name: Diese Woche
+    type: column
+    color: '#3498db'
+    group_by:
+      func: last
+      duration: 1w
+  - entity: sensor.energierechner_vorherige_woche_verbrauch
+    name: Letzte Woche
+    type: column
+    color: '#95a5a6'
+    group_by:
+      func: last
+      duration: 1w
+```
+
+### Jahresvergleich
+Und hier der Code für den **Jahresvergleich** (Aktuelles Jahr vs. Letztes Jahr):
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Jahresvergleich (Verbrauch)
+  show_states: true
+  colorize_states: true
+graph_span: 1y
+span:
+  end: year
+apex_config:
+  xaxis:
+    labels:
+      show: false
+    tooltip:
+      enabled: false
+  tooltip:
+    x:
+      show: false
+series:
+  - entity: sensor.energierechner_aktuelles_jahr_verbrauch
+    name: Dieses Jahr
+    type: column
+    color: '#e74c3c'
+    group_by:
+      func: last
+      duration: 1y
+  - entity: sensor.energierechner_letztes_jahr_verbrauch
+    name: Letztes Jahr
+    type: column
+    color: '#95a5a6'
+    group_by:
+      func: last
+      duration: 1y
+```
 
 > **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
 
