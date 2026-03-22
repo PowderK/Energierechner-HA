@@ -125,7 +125,6 @@ Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sonde
 
 ```yaml
 type: custom:apexcharts-card
-chart_type: bar
 header:
   show: true
   title: Tagesvergleich (Verbrauch)
@@ -146,12 +145,14 @@ apex_config:
 series:
   - entity: sensor.energierechner_heute_verbrauch
     name: Heute
+    type: column
     color: '#3498db'
     group_by:
       func: last
       duration: 1d
   - entity: sensor.energierechner_gestern_verbrauch
     name: Gestern
+    type: column
     color: '#95a5a6'
     group_by:
       func: last
