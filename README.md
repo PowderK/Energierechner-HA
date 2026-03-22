@@ -135,11 +135,13 @@ cards:
       title: Tagesvergleich (Verbrauch)
       show_states: true
       colorize_states: true
-    graph_span: 1d
+    graph_span: 2h
     span:
-      end: day
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
@@ -162,11 +164,13 @@ cards:
       title: Tagesvergleich (Kosten)
       show_states: true
       colorize_states: true
-    graph_span: 1d
+    graph_span: 2h
     span:
-      end: day
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
@@ -197,11 +201,13 @@ cards:
       title: Wochenvergleich (Verbrauch)
       show_states: true
       colorize_states: true
-    graph_span: 1w
+    graph_span: 2h
     span:
-      end: isoWeek
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
@@ -224,11 +230,13 @@ cards:
       title: Wochenvergleich (Kosten)
       show_states: true
       colorize_states: true
-    graph_span: 1w
+    graph_span: 2h
     span:
-      end: isoWeek
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
@@ -259,11 +267,13 @@ cards:
       title: Jahresvergleich (Verbrauch)
       show_states: true
       colorize_states: true
-    graph_span: 1y
+    graph_span: 2h
     span:
-      end: year
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
@@ -286,11 +296,13 @@ cards:
       title: Jahresvergleich (Kosten)
       show_states: true
       colorize_states: true
-    graph_span: 1y
+    graph_span: 2h
     span:
-      end: year
+      offset: '+1h'
     update_interval: 5m
     apex_config:
+      chart: { parentHeightOffset: 0 }
+      plotOptions: { bar: { columnWidth: '60%' } }
       xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
       tooltip: { x: { show: false } }
     series:
