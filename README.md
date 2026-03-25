@@ -143,6 +143,70 @@ cards:
         name: Kosten Letzter Monat
 ```
 
+### Alle Perioden nebeneinander (Verlaufsübersicht)
+
+Mit der nativen `statistics-graph`-Karte (keine HACS-Erweiterung nötig!) kannst du außerdem alle Tage, Wochen oder Monate direkt nebeneinander als Balkendiagramm darstellen. Diese Karte liest die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs-Sensors aus.
+
+**Alle Tage der aktuellen Woche (Mo–So):**
+```yaml
+type: statistics-graph
+title: Verbrauch – Alle Tage dieser Woche
+chart_type: bar
+period: day
+days_to_show: 7
+stat_types:
+  - change
+entities:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch
+```
+
+**Alle Wochen des aktuellen Jahres:**
+```yaml
+type: statistics-graph
+title: Verbrauch – Alle Wochen dieses Jahres
+chart_type: bar
+period: week
+days_to_show: 365
+stat_types:
+  - change
+entities:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch
+```
+
+**Alle Monate des aktuellen Jahres:**
+```yaml
+type: statistics-graph
+title: Verbrauch – Alle Monate dieses Jahres
+chart_type: bar
+period: month
+days_to_show: 365
+stat_types:
+  - change
+entities:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch
+```
+
+Du kannst Verbrauch und Kosten auch **gleichzeitig** anzeigen, indem du beide Sensoren in einer Karte listest:
+```yaml
+type: statistics-graph
+title: Verbrauch & Kosten – Alle Monate
+chart_type: bar
+period: month
+days_to_show: 365
+stat_types:
+  - change
+entities:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch (kWh)
+  - entity: sensor.energierechner_gesamtkosten
+    name: Kosten (€)
+```
+
+> **Tipp:** Stelle `period` auf `day`, `week` oder `month` um, je nachdem welche Granularität du brauchst. Mit `days_to_show: 30` siehst du nur die letzten 30 Tage, mit `365` das gesamte aktuelle Jahr.
+
 ### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
 
 Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
