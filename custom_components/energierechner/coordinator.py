@@ -91,6 +91,26 @@ def _get_period_bounds(keyword: str) -> tuple[datetime, datetime]:
     raise ValueError(f"Unbekanntes Zeitraum-Schlüsselwort: {keyword}")
 
 
+def _get_month_bounds(year: int, month: int) -> tuple[datetime, datetime]:
+    """Start und Ende eines bestimmten Monats."""
+    tz = dt_util.now().tzinfo
+    s = datetime(year, month, 1, 0, 0, 0, tzinfo=tz)
+    if month == 12:
+        e = datetime(year, 12, 31, 23, 59, 59, tzinfo=tz)
+    else:
+        e = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=tz) - timedelta(seconds=1)
+    return s, e
+
+
+def _get_weekday_bounds(weekday: int) -> tuple[datetime, datetime]:
+    """Start und Ende eines Wochentags (0=Mo..6=So) der aktuellen Woche."""
+    now = dt_util.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    monday = today - timedelta(days=today.weekday())
+    day = monday + timedelta(days=weekday)
+    return day, day + timedelta(days=1) - timedelta(seconds=1)
+
+
 # ---------------------------------------------------------------------------
 # Coordinator
 # ---------------------------------------------------------------------------
@@ -338,6 +358,51 @@ class EnergierechnerCoordinator(DataUpdateCoordinator):
                 data[f"{label}_day_consumption"] = split["day"]
             if self._nightly_consumption:
                 data[f"{label}_night_consumption"] = split["night"]
+
+        # ---- Monatliche Aufschlüsselung (Jan–Dez aktuelles Jahr) ----------
+        now = dt_util.now()
+        month_names = [
+            "januar", "februar", "maerz", "april", "mai", "juni",
+            "juli", "august", "september", "oktober", "november", "dezember"
+        ]
+        for m in range(1, 13):
+            m_start, m_end = _get_month_bounds(now.year, m)
+            if m_start > now:
+                data[f"month_{month_names[m-1]}_consumption"] = None
+                data[f"month_{month_names[m-1]}_costs"] = None
+                continue
+            m_end_clamped = min(m_end, now)
+            m_split = await self._consumption_split(
+                m_start, m_end_clamped,
+                label=f"month_{month_names[m-1]}"
+            )
+            m_tariff = self._tariff_at(m_start)
+            m_days = (m_end_clamped.date() - m_start.date()).days + 1
+            m_cost = self._costs(m_split, m_tariff, m_days)
+            data[f"month_{month_names[m-1]}_consumption"] = m_split["total"]
+            data[f"month_{month_names[m-1]}_costs"] = m_cost
+
+        # ---- Wöchentliche Aufschlüsselung (Mo–So aktuelle KW) -------------
+        weekday_names = [
+            "montag", "dienstag", "mittwoch", "donnerstag",
+            "freitag", "samstag", "sonntag"
+        ]
+        for wd in range(7):
+            wd_start, wd_end = _get_weekday_bounds(wd)
+            if wd_start > now:
+                data[f"weekday_{weekday_names[wd]}_consumption"] = None
+                data[f"weekday_{weekday_names[wd]}_costs"] = None
+                continue
+            wd_end_clamped = min(wd_end, now)
+            wd_split = await self._consumption_split(
+                wd_start, wd_end_clamped,
+                label=f"weekday_{weekday_names[wd]}"
+            )
+            wd_tariff = self._tariff_at(wd_start)
+            wd_days = 1
+            wd_cost = self._costs(wd_split, wd_tariff, wd_days)
+            data[f"weekday_{weekday_names[wd]}_consumption"] = wd_split["total"]
+            data[f"weekday_{weekday_names[wd]}_costs"] = wd_cost
 
         # ---- Periodenberechnung & Globales Total ------------------------
         # Globales Total basiert auf der kompletten Langzeithistorie, um nichts

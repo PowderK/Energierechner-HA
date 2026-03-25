@@ -210,6 +210,71 @@ async def async_setup_entry(
                     icon="mdi:scale-balance",
                 ))
 
+    # ---- Alle Monate des aktuellen Jahres (Jan–Dez) ----------------------
+    MONTH_META = [
+        ("januar",     "Januar"),
+        ("februar",    "Februar"),
+        ("maerz",      "März"),
+        ("april",      "April"),
+        ("mai",        "Mai"),
+        ("juni",       "Juni"),
+        ("juli",       "Juli"),
+        ("august",     "August"),
+        ("september",  "September"),
+        ("oktober",    "Oktober"),
+        ("november",   "November"),
+        ("dezember",   "Dezember"),
+    ]
+    for key, label in MONTH_META:
+        entities.append(EnergierechnerSensor(
+            coordinator, entry_id, name,
+            data_key=f"month_{key}_consumption",
+            label=f"{label} {lbl_cons}",
+            unit=UnitOfEnergy.KILO_WATT_HOUR,
+            device_class=SensorDeviceClass.ENERGY,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon=icon_cons,
+        ))
+        entities.append(EnergierechnerSensor(
+            coordinator, entry_id, name,
+            data_key=f"month_{key}_costs",
+            label=f"{label} {lbl_cost}",
+            unit="€",
+            device_class=SensorDeviceClass.MONETARY,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:currency-eur",
+        ))
+
+    # ---- Alle Wochentage der aktuellen Woche (Mo–So) --------------------
+    WEEKDAY_META = [
+        ("montag",     "Montag"),
+        ("dienstag",   "Dienstag"),
+        ("mittwoch",   "Mittwoch"),
+        ("donnerstag", "Donnerstag"),
+        ("freitag",    "Freitag"),
+        ("samstag",    "Samstag"),
+        ("sonntag",    "Sonntag"),
+    ]
+    for key, label in WEEKDAY_META:
+        entities.append(EnergierechnerSensor(
+            coordinator, entry_id, name,
+            data_key=f"weekday_{key}_consumption",
+            label=f"{label} {lbl_cons}",
+            unit=UnitOfEnergy.KILO_WATT_HOUR,
+            device_class=SensorDeviceClass.ENERGY,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon=icon_cons,
+        ))
+        entities.append(EnergierechnerSensor(
+            coordinator, entry_id, name,
+            data_key=f"weekday_{key}_costs",
+            label=f"{label} {lbl_cost}",
+            unit="€",
+            device_class=SensorDeviceClass.MONETARY,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:currency-eur",
+        ))
+
     async_add_entities(entities)
 
 
