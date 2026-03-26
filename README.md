@@ -206,8 +206,139 @@ entities:
 ```
 
 > **Tipp:** Stelle `period` auf `day`, `week` oder `month` um, je nachdem welche Granularität du brauchst. Mit `days_to_show: 30` siehst du nur die letzten 30 Tage, mit `365` das gesamte aktuelle Jahr.
+> **Wichtig:** Diese Karte benötigt historische Daten im Long-Term-Storage (LTS). Wenn diese (z.B. nach einem Import) fehlen, zeigt die Karte ggf. nur einen Balken. Nutze in diesem Fall die unten stehende **Monats-Übersicht**.
 
-### Statischer Balken-Vergleich der Vorperiode (via ApexCharts)
+### Monats-Übersicht (Alle Monate des Jahres nebeneinander)
+
+Ab Version 1.5.0 stellt der Energierechner für jeden Monat des aktuellen Jahres (Januar bis Dezember) eine **eigene Entität** zur Verfügung. Dies ermöglicht es dir, eine wunderschöne Jahresübersicht zu erstellen, die auch dann funktioniert, wenn die historische Langzeit-Statistik von Home Assistant noch lückenhaft ist.
+
+Hier ein Beispiel für `custom:apexcharts-card`:
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Jahresübersicht (Verbrauch)
+  show_states: false
+graph_span: 1d
+span:
+  start: day
+apex_config:
+  chart: { height: 250 }
+  plotOptions: { bar: { columnWidth: '70%', borderRadius: 4 } }
+  xaxis: { labels: { show: true } }
+series:
+  - entity: sensor.energierechner_januar_verbrauch
+    name: Jan
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_februar_verbrauch
+    name: Feb
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_maerz_verbrauch
+    name: Mär
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_april_verbrauch
+    name: Apr
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_mai_verbrauch
+    name: Mai
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_juni_verbrauch
+    name: Jun
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_juli_verbrauch
+    name: Jul
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_august_verbrauch
+    name: Aug
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_september_verbrauch
+    name: Sep
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_oktober_verbrauch
+    name: Okt
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_november_verbrauch
+    name: Nov
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+  - entity: sensor.energierechner_dezember_verbrauch
+    name: Dez
+    type: column
+    color: '#3498db'
+    data_generator: |
+      return [[new Date().getTime(), entity.state]];
+```
+
+### Wochen-Übersicht (Alle Tage der Woche nebeneinander)
+
+Analog dazu gibt es Entitäten für jeden Wochentag (**Montag bis Sonntag**) der aktuellen Kalenderwoche:
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Wochenübersicht
+graph_span: 1d
+span:
+  start: day
+apex_config:
+  plotOptions: { bar: { columnWidth: '70%' } }
+series:
+  - entity: sensor.energierechner_montag_verbrauch
+    name: Mo
+    type: column
+  - entity: sensor.energierechner_dienstag_verbrauch
+    name: Di
+    type: column
+  - entity: sensor.energierechner_mittwoch_verbrauch
+    name: Mi
+    type: column
+  - entity: sensor.energierechner_donnerstag_verbrauch
+    name: Do
+    type: column
+  - entity: sensor.energierechner_freitag_verbrauch
+    name: Fr
+    type: column
+  - entity: sensor.energierechner_samstag_verbrauch
+    name: Sa
+    type: column
+  - entity: sensor.energierechner_sonntag_verbrauch
+    name: So
+    type: column
+```
 
 Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
 Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen einfach **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Darstellung über einen einfachen JavaScript-Zweizeiler erzwingen, sodass die Karte exakt nur einen dicken Balken pro Entität generiert und nichts abschneidet.
