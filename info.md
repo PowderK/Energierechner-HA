@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/logo.png" alt="Logo" width="120" />
+  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/brand/logo.png" alt="Logo" width="120" />
 </p>
 
 # Energierechner
@@ -19,6 +19,6 @@ Berechnung von Stromkosten mit **dynamischen Tarifperioden**, Tag-/Nachttarif un
 ## Screenshots
 
 <p align="center">
-  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/Werte.png" width="45%" alt="Werte" />
-  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/Vergleiche.png" width="45%" alt="Vergleiche" />
+  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/assets/Werte.png" width="45%" alt="Werte" />
+  <img src="https://github.com/PowderK/Energierechner-HA/raw/main/assets/Vergleiche.png" width="45%" alt="Vergleiche" />
 </p>

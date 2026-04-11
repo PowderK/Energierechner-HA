@@ -1,7 +1,7 @@
 # Energierechner Home Assistant Integration
 
 <p align="center">
-  <img src="logo.png" alt="Logo" width="150" />
+  <img src="brand/logo.png" alt="Logo" width="150" />
 </p>
 
 Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Schnittcher/Energierechner) zur Berechnung von Stromkosten mit dynamischen Tarifperioden, Tag-/Nachttarifen und flexibler Aggregation.
@@ -9,8 +9,9 @@ Ein Home Assistant Port des [Energierechner Symcon Moduls](https://github.com/Sc
 ## Screenshots
 
 <p align="center">
-  <img src="Werte.png" alt="Werte" width="45%" />
-  <img src="Vergleiche.png" alt="Vergleiche" width="45%" />
+  <img src="assets/Tag.PNG" alt="Tag" width="30%" />
+  <img src="assets/Woche.PNG" alt="Woche" width="30%" />
+  <img src="assets/Gesamt.PNG" alt="Gesamt" width="30%" />
 </p>
 
 ## Funktionen
@@ -143,404 +144,130 @@ cards:
         name: Kosten Letzter Monat
 ```
 
-### Alle Perioden nebeneinander (Verlaufsübersicht)
+### 🚀 Premium Dashboard (FusionSolar Style)
 
-Mit der nativen `statistics-graph`-Karte (keine HACS-Erweiterung nötig!) kannst du außerdem alle Tage, Wochen oder Monate direkt nebeneinander als Balkendiagramm darstellen. Diese Karte liest die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs-Sensors aus.
+Diese Beispiele nutzen die [apexcharts-card](https://github.com/RomRider/apexcharts-card) für ein hochprofessionelles Design (ähnlich Huawei FusionSolar). Für die komfortable Navigation durch Zeiträume (Pfeiltasten) empfehlen wir zusätzlich die [history-explorer-card](https://github.com/alexarch21/history-explorer-card).
 
-**Alle Tage der aktuellen Woche (Mo–So):**
-```yaml
-type: statistics-graph
-title: Verbrauch – Alle Tage dieser Woche
-chart_type: bar
-period: day
-days_to_show: 7
-stat_types:
-  - change
-entities:
-  - entity: sensor.energierechner_gesamtverbrauch
-    name: Verbrauch
-```
-
-**Alle Wochen des aktuellen Jahres:**
-```yaml
-type: statistics-graph
-title: Verbrauch – Alle Wochen dieses Jahres
-chart_type: bar
-period: week
-days_to_show: 365
-stat_types:
-  - change
-entities:
-  - entity: sensor.energierechner_gesamtverbrauch
-    name: Verbrauch
-```
-
-**Alle Monate des aktuellen Jahres:**
-```yaml
-type: statistics-graph
-title: Verbrauch – Alle Monate dieses Jahres
-chart_type: bar
-period: month
-days_to_show: 365
-stat_types:
-  - change
-entities:
-  - entity: sensor.energierechner_gesamtverbrauch
-    name: Verbrauch
-```
-
-Du kannst Verbrauch und Kosten auch **gleichzeitig** anzeigen, indem du beide Sensoren in einer Karte listest:
-```yaml
-type: statistics-graph
-title: Verbrauch & Kosten – Alle Monate
-chart_type: bar
-period: month
-days_to_show: 365
-stat_types:
-  - change
-entities:
-  - entity: sensor.energierechner_gesamtverbrauch
-    name: Verbrauch (kWh)
-  - entity: sensor.energierechner_gesamtkosten
-    name: Kosten (€)
-```
-
-> **Tipp:** Stelle `period` auf `day`, `week` oder `month` um, je nachdem welche Granularität du brauchst. Mit `days_to_show: 30` siehst du nur die letzten 30 Tage, mit `365` das gesamte aktuelle Jahr.
-> **Wichtig:** Diese Karte benötigt historische Daten im Long-Term-Storage (LTS). Wenn diese (z.B. nach einem Import) fehlen, zeigt die Karte ggf. nur einen Balken. Nutze in diesem Fall die unten stehende **Monats-Übersicht**.
-
-### Monats-Übersicht (Alle Monate des Jahres nebeneinander)
-
-Ab Version 1.5.0 stellt der Energierechner für jeden Monat des aktuellen Jahres (Januar bis Dezember) eine **eigene Entität** zur Verfügung. Dies ermöglicht es dir, eine wunderschöne Jahresübersicht zu erstellen, die auch dann funktioniert, wenn die historische Langzeit-Statistik von Home Assistant noch lückenhaft ist.
-
-Hier ein Beispiel für `custom:apexcharts-card`:
+#### 1. Tag (Vergleich mit Vortag)
+Zeigt den heutigen Verlauf als Fläche und den gestrigen Verlauf als Linie.
+*Hinweis: Nutze hierfür am besten deinen Live-Leistungssensor (W/kW).*
 
 ```yaml
 type: custom:apexcharts-card
 header:
   show: true
-  title: Jahresübersicht (Verbrauch)
-  show_states: false
-graph_span: 1d
+  title: Tagesverlauf (Vergleich mit Gestern)
+  show_states: true
+  colorize_states: true
+graph_span: 24h
 span:
   start: day
 apex_config:
   chart: { height: 250 }
-  plotOptions: { bar: { columnWidth: '70%', borderRadius: 4 } }
-  xaxis: { labels: { show: true } }
+  legend: { show: true, position: bottom }
+  stroke: { curve: smooth, width: 2 }
 series:
-  - entity: sensor.energierechner_januar_verbrauch
-    name: Jan
-    type: column
+  - entity: sensor.dein_wirkleistung_sensor # Ersetzen durch Leistungs-Entität
+    name: Heute
+    type: area
+    color: '#ff9800'
+    opacity: 0.3
+    extend_to: now
+  - entity: sensor.dein_wirkleistung_sensor
+    name: Gestern
+    offset: -24h
+    type: line
     color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_februar_verbrauch
-    name: Feb
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_maerz_verbrauch
-    name: Mär
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_april_verbrauch
-    name: Apr
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_mai_verbrauch
-    name: Mai
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_juni_verbrauch
-    name: Jun
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_juli_verbrauch
-    name: Jul
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_august_verbrauch
-    name: Aug
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_september_verbrauch
-    name: Sep
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_oktober_verbrauch
-    name: Okt
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_november_verbrauch
-    name: Nov
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
-  - entity: sensor.energierechner_dezember_verbrauch
-    name: Dez
-    type: column
-    color: '#3498db'
-    data_generator: |
-      return [[new Date().getTime(), entity.state]];
+    stroke_width: 2
 ```
 
-### Wochen-Übersicht (Alle Tage der Woche nebeneinander)
-
-Analog dazu gibt es Entitäten für jeden Wochentag (**Montag bis Sonntag**) der aktuellen Kalenderwoche:
+#### 2. Woche (Balkendiagramm)
+Für das "Durchschalten" der Wochen (Pfeiltasten) empfehlen wir die [energy-period-selector-plus](https://github.com/floris090/energy-period-selector-plus) Karte in Kombination mit `apexcharts-card`.
 
 ```yaml
 type: custom:apexcharts-card
 header:
   show: true
   title: Wochenübersicht
-graph_span: 1d
+graph_span: 1w
 span:
-  start: day
+  start: week
 apex_config:
-  plotOptions: { bar: { columnWidth: '70%' } }
+  chart: { type: bar, height: 250 }
+  plotOptions: { bar: { columnWidth: '70%', borderRadius: 4 } }
 series:
-  - entity: sensor.energierechner_montag_verbrauch
-    name: Mo
-    type: column
-  - entity: sensor.energierechner_dienstag_verbrauch
-    name: Di
-    type: column
-  - entity: sensor.energierechner_mittwoch_verbrauch
-    name: Mi
-    type: column
-  - entity: sensor.energierechner_donnerstag_verbrauch
-    name: Do
-    type: column
-  - entity: sensor.energierechner_freitag_verbrauch
-    name: Fr
-    type: column
-  - entity: sensor.energierechner_samstag_verbrauch
-    name: Sa
-    type: column
-  - entity: sensor.energierechner_sonntag_verbrauch
-    name: So
-    type: column
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch
+    color: '#ff9800'
+    group_by:
+      func: diff
+      duration: 1d
 ```
 
-Da die alte `custom:bar-card` nicht mehr gepflegt wird, eignet sich auch hierfür die `custom:apexcharts-card` hervorragend. 
-Wenn du keine Zeitachse mit einem Verlaufskurven-Diagramm haben möchtest, sondern stattdessen einfach **zwei simple Säulenbalken** zum sofortigen Vergleich nebeneinander stehen haben willst (z.B. ein Balken für Heute, ein Balken für Gestern), kannst du die Darstellung über einen einfachen JavaScript-Zweizeiler erzwingen, sodass die Karte exakt nur einen dicken Balken pro Entität generiert und nichts abschneidet.
+#### 3. Monat (Balkendiagramm)
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Monatsübersicht
+graph_span: 1month
+span:
+  start: month
+apex_config:
+  chart: { type: bar, height: 250 }
+  plotOptions: { bar: { columnWidth: '80%', borderRadius: 4 } }
+series:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Verbrauch
+    color: '#ff9800'
+    group_by:
+      func: diff
+      duration: 1d
+```
 
-Hier ist ein komplettes YAML-Setup als Dashboard-Zwei-Spalten-Grid (Links: **Verbrauch**, Rechts: **Kosten**):
+#### 4. Jahr (12 Monate)
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Jahresübersicht
+graph_span: 1y
+span:
+  start: year
+apex_config:
+  chart: { type: bar, height: 250 }
+  plotOptions: { bar: { columnWidth: '70%', borderRadius: 4 } }
+series:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Monatsertrag
+    color: '#ff9800'
+    group_by:
+      func: diff
+      duration: 1month
+```
+
+#### 5. Gesamt (Alle Jahre nebeneinander)
+Zeigt alle verfügbaren Jahre in einem Vergleichsdiamgramm.
 
 ```yaml
-type: grid
-columns: 1
-cards:
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Tagesvergleich (Verbrauch)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_heute_verbrauch
-        name: Heute
-        type: column
-        color: '#3498db'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_gestern_verbrauch
-        name: Gestern
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Tagesvergleich (Kosten)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_heute_kosten
-        name: Heute
-        type: column
-        color: '#f1c40f'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_gestern_kosten
-        name: Gestern
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Gesamtübersicht (Jahresvergleich)
+graph_span: 5y
+span:
+  end: year
+apex_config:
+  chart: { type: bar, height: 250 }
+  plotOptions: { bar: { columnWidth: '50%', borderRadius: 4 } }
+series:
+  - entity: sensor.energierechner_gesamtverbrauch
+    name: Jahresverbrauch
+    color: '#ff9800'
+    group_by:
+      func: diff
+      duration: 1y
 ```
-
-### Wochenvergleich (Verbrauch & Kosten getrennt)
-Für den perfekten **Wochenvergleich** (Aktuelle Woche vs. Vorherige Woche):
-
-```yaml
-type: grid
-columns: 1
-cards:
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Wochenvergleich (Verbrauch)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_aktuelle_woche_verbrauch
-        name: Diese Woche
-        type: column
-        color: '#3498db'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_vorherige_woche_verbrauch
-        name: Letzte Woche
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Wochenvergleich (Kosten)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_aktuelle_woche_kosten
-        name: Diese Woche
-        type: column
-        color: '#f1c40f'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_vorherige_woche_kosten
-        name: Letzte Woche
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-```
-
-### Jahresvergleich (Verbrauch & Kosten getrennt)
-Und hier der Code für den **Jahresvergleich** (Aktuelles Jahr vs. Letztes Jahr):
-
-```yaml
-type: grid
-columns: 1
-cards:
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Jahresvergleich (Verbrauch)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_aktuelles_jahr_verbrauch
-        name: Dieses Jahr
-        type: column
-        color: '#e74c3c'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_letztes_jahr_verbrauch
-        name: Letztes Jahr
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-
-  - type: custom:apexcharts-card
-    header:
-      show: true
-      title: Jahresvergleich (Kosten)
-      show_states: true
-      colorize_states: true
-    graph_span: 2h
-    span:
-      offset: '+1h'
-    update_interval: 5m
-    apex_config:
-      chart: { parentHeightOffset: 0 }
-      plotOptions: { bar: { columnWidth: '60%' } }
-      xaxis: { labels: { show: false }, tooltip: { enabled: false }, axisTicks: { show: false }, axisBorder: { show: false } }
-      tooltip: { x: { show: false } }
-    series:
-      - entity: sensor.energierechner_aktuelles_jahr_kosten
-        name: Dieses Jahr
-        type: column
-        color: '#f1c40f'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-      - entity: sensor.energierechner_letztes_jahr_kosten
-        name: Letztes Jahr
-        type: column
-        color: '#95a5a6'
-        data_generator: |
-          return [[new Date().getTime(), entity.state]];
-```
-
-> **Tipp zum nativen Diagramm**: Die native `statistics-graph` Karte (ganz oben im ersten Beispiel) wertet automatisch die Langzeitstatistiken (`state_class: total`) des Gesamtverbrauchs aus. Du kannst dort `period` auch auf `month` stellen, um die fortlaufenden Monate dieses Jahres miteinander zu vergleichen!
 
 > **Tipp für kompakte Layouts:** Wenn du die [multiple-entity-row](https://github.com/benct/lovelace-multiple-entity-row) HACS Frontend-Karte verwendest, lassen sich aktuelle Periode und Vorperiode sogar numerisch in *einer einzigen* Zeile kombinieren.
 
